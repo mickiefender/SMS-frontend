@@ -20,10 +20,19 @@ interface Student {
     first_name: string
     last_name: string
   }
+  user_data?: {
+    id: number
+    username: string
+    email: string
+    first_name: string
+    last_name: string
+  }
   username?: string
   email?: string
   first_name?: string
   last_name?: string
+  user_name?: string
+  user_email?: string
   is_active?: boolean
   student_id?: string
 }
@@ -50,6 +59,7 @@ export function StudentsManagement() {
       setError(null)
       const response = await usersAPI.students()
       const data = response.data.results || response.data || []
+      console.log("[v0] Students data received:", data)
       setStudents(Array.isArray(data) ? data : [])
     } catch (err: any) {
       console.error("[v0] Failed to fetch students:", err?.response?.data || err)
@@ -72,9 +82,6 @@ export function StudentsManagement() {
         await usersAPI.updateStudent(editingStudent.id, formData)
       } else {
         const schoolId = user?.school_id || user?.school
-        console.log("[v0] Current user:", user)
-        console.log("[v0] School ID for registration:", schoolId)
-
         if (!schoolId) {
           setError("No school associated with your account. Please ensure you are logged in as a school admin.")
           return
@@ -116,12 +123,11 @@ export function StudentsManagement() {
 
   const handleEdit = (student: Student) => {
     setEditingStudent(student)
-    const userData = student.user || student
     setFormData({
-      username: userData.username || "",
-      email: userData.email || "",
-      first_name: userData.first_name || "",
-      last_name: userData.last_name || "",
+      username: student.username || student.user_data?.username || student.user?.username || "",
+      email: student.email || student.user_email || student.user_data?.email || student.user?.email || "",
+      first_name: student.first_name || student.user_data?.first_name || student.user?.first_name || "",
+      last_name: student.last_name || student.user_data?.last_name || student.user?.last_name || "",
       password: "",
       student_id: student.student_id || "",
     })
@@ -141,14 +147,30 @@ export function StudentsManagement() {
   }
 
   const getStudentName = (student: Student) => {
+    // Try flat fields first (from enhanced serializer)
+    if (student.first_name || student.last_name) {
+      return `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.username || "N/A"
+    }
+    // Try user_name field
+    if (student.user_name) {
+      return student.user_name
+    }
+    // Try user_data nested object
+    if (student.user_data) {
+      return (
+        `${student.user_data.first_name || ""} ${student.user_data.last_name || ""}`.trim() ||
+        student.user_data.username
+      )
+    }
+    // Try user nested object
     if (student.user) {
       return `${student.user.first_name || ""} ${student.user.last_name || ""}`.trim() || student.user.username
     }
-    return `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.username || "N/A"
+    return student.username || "N/A"
   }
 
   const getStudentEmail = (student: Student) => {
-    return student.user?.email || student.email || "N/A"
+    return student.email || student.user_email || student.user_data?.email || student.user?.email || "N/A"
   }
 
   if (loading) {

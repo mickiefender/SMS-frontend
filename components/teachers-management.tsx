@@ -20,10 +20,19 @@ interface Teacher {
     first_name: string
     last_name: string
   }
+  user_data?: {
+    id: number
+    username: string
+    email: string
+    first_name: string
+    last_name: string
+  }
   username?: string
   email?: string
   first_name?: string
   last_name?: string
+  user_name?: string
+  user_email?: string
   employee_id?: string
   qualification?: string
   experience_years?: number
@@ -51,8 +60,9 @@ export function TeachersManagement() {
     try {
       setLoading(true)
       setError(null)
-      const response = await usersAPI.teachers();
+      const response = await usersAPI.teachers()
       const data = response.data.results || response.data || []
+      console.log("[v0] Teachers data received:", data)
       setTeachers(Array.isArray(data) ? data : [])
     } catch (err: any) {
       console.error("[v0] Failed to fetch teachers:", err?.response?.data || err)
@@ -119,12 +129,11 @@ export function TeachersManagement() {
 
   const handleEdit = (teacher: Teacher) => {
     setEditingTeacher(teacher)
-    const userData = teacher.user || teacher
     setFormData({
-      username: userData.username || "",
-      email: userData.email || "",
-      first_name: userData.first_name || "",
-      last_name: userData.last_name || "",
+      username: teacher.username || teacher.user_data?.username || teacher.user?.username || "",
+      email: teacher.email || teacher.user_email || teacher.user_data?.email || teacher.user?.email || "",
+      first_name: teacher.first_name || teacher.user_data?.first_name || teacher.user?.first_name || "",
+      last_name: teacher.last_name || teacher.user_data?.last_name || teacher.user?.last_name || "",
       password: "",
       employee_id: teacher.employee_id || "",
       qualification: teacher.qualification || "",
@@ -146,14 +155,26 @@ export function TeachersManagement() {
   }
 
   const getTeacherName = (teacher: Teacher) => {
+    if (teacher.first_name || teacher.last_name) {
+      return `${teacher.first_name || ""} ${teacher.last_name || ""}`.trim() || teacher.username || "N/A"
+    }
+    if (teacher.user_name) {
+      return teacher.user_name
+    }
+    if (teacher.user_data) {
+      return (
+        `${teacher.user_data.first_name || ""} ${teacher.user_data.last_name || ""}`.trim() ||
+        teacher.user_data.username
+      )
+    }
     if (teacher.user) {
       return `${teacher.user.first_name || ""} ${teacher.user.last_name || ""}`.trim() || teacher.user.username
     }
-    return `${teacher.first_name || ""} ${teacher.last_name || ""}`.trim() || teacher.username || "N/A"
+    return teacher.username || "N/A"
   }
 
   const getTeacherEmail = (teacher: Teacher) => {
-    return teacher.user?.email || teacher.email || "N/A"
+    return teacher.email || teacher.user_email || teacher.user_data?.email || teacher.user?.email || "N/A"
   }
 
   if (loading) {
