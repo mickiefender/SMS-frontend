@@ -58,6 +58,9 @@ export const academicsAPI = {
   subjects: () => apiClient.get("/academics/subjects/"),
   enrollments: () => apiClient.get("/academics/enrollments/"),
   timetables: () => apiClient.get("/academics/timetables/"),
+  createTimetable: (data: any) => apiClient.post("/academics/timetables/", data),
+  updateTimetable: (id: number, data: any) => apiClient.put(`/academics/timetables/${id}/`, data),
+  deleteTimetable: (id: number) => apiClient.delete(`/academics/timetables/${id}/`),
   classSubjects: () => apiClient.get("/academics/class-subjects/"),
   createClass: (data: any) => apiClient.post("/academics/classes/", data),
   createSubject: (data: any) => apiClient.post("/academics/subjects/", data),
@@ -94,6 +97,8 @@ export const gradesAPI = {
   list: () => apiClient.get("/students/grades/"),
   create: (data: any) => apiClient.post("/students/grades/", data),
   bulkCreate: (data: any) => apiClient.post("/students/grades/bulk/", data),
+  update: (id: number, data: any) => apiClient.put(`/students/grades/${id}/`, data),
+  delete: (id: number) => apiClient.delete(`/students/grades/${id}/`),
 }
 
 export const usersAPI = {
