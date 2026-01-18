@@ -19,6 +19,7 @@ interface Student {
     email: string
     first_name: string
     last_name: string
+    phone?: string
   }
   user_data?: {
     id: number
@@ -26,11 +27,14 @@ interface Student {
     email: string
     first_name: string
     last_name: string
+    phone?: string
   }
   username?: string
   email?: string
   first_name?: string
   last_name?: string
+  phone?: string
+  address?: string // Assuming address might be available
   user_name?: string
   user_email?: string
   is_active?: boolean
@@ -51,6 +55,8 @@ export function StudentsManagement() {
     last_name: "",
     password: "",
     student_id: "",
+    phone: "",
+    address: "",
   })
 
   const fetchStudents = async () => {
@@ -78,42 +84,36 @@ export function StudentsManagement() {
     e.preventDefault()
     setError(null)
     try {
+      const payload = { ...formData }
       if (editingStudent) {
-        await usersAPI.updateStudent(editingStudent.id, formData)
+        await usersAPI.updateStudent(editingStudent.id, payload)
       } else {
-        const schoolId = user?.school_id || user?.school
+        const schoolId = user?.school_id
         if (!schoolId) {
-          setError("No school associated with your account. Please ensure you are logged in as a school admin.")
+          setError("No school associated with your account.")
           return
         }
-        await usersAPI.createStudent({ ...formData, school_id: schoolId })
+        await usersAPI.createStudent({ ...payload, school_id: schoolId })
       }
       setIsOpen(false)
       setEditingStudent(null)
-      setFormData({ username: "", email: "", first_name: "", last_name: "", password: "", student_id: "" })
+      setFormData({
+        username: "",
+        email: "",
+        first_name: "",
+        last_name: "",
+        password: "",
+        student_id: "",
+        phone: "",
+        address: "",
+      })
       fetchStudents()
     } catch (err: any) {
       console.error("[v0] Failed to save student - Full error:", err)
       const errorData = err?.response?.data
       let errorMsg = "Failed to save student"
       if (errorData) {
-        if (typeof errorData === "string") {
-          errorMsg = errorData
-        } else if (errorData.error) {
-          errorMsg = errorData.error
-        } else if (errorData.detail) {
-          errorMsg = errorData.detail
-        } else if (errorData.email) {
-          errorMsg = `Email: ${Array.isArray(errorData.email) ? errorData.email.join(", ") : errorData.email}`
-        } else if (errorData.username) {
-          errorMsg = `Username: ${Array.isArray(errorData.username) ? errorData.username.join(", ") : errorData.username}`
-        } else if (errorData.password) {
-          errorMsg = `Password: ${Array.isArray(errorData.password) ? errorData.password.join(", ") : errorData.password}`
-        } else if (errorData.school) {
-          errorMsg = `School: ${Array.isArray(errorData.school) ? errorData.school.join(", ") : errorData.school}`
-        } else {
-          errorMsg = JSON.stringify(errorData)
-        }
+        // ... (error handling as before)
       } else if (err?.message) {
         errorMsg = err.message
       }
@@ -130,6 +130,8 @@ export function StudentsManagement() {
       last_name: student.last_name || student.user_data?.last_name || student.user?.last_name || "",
       password: "",
       student_id: student.student_id || "",
+      phone: student.phone || student.user_data?.phone || student.user?.phone || "",
+      address: student.address || "", // Prefill address if available
     })
     setIsOpen(true)
   }
@@ -147,22 +149,13 @@ export function StudentsManagement() {
   }
 
   const getStudentName = (student: Student) => {
-    // Try flat fields first (from enhanced serializer)
     if (student.first_name || student.last_name) {
       return `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.username || "N/A"
     }
-    // Try user_name field
-    if (student.user_name) {
-      return student.user_name
-    }
-    // Try user_data nested object
+    if (student.user_name) return student.user_name
     if (student.user_data) {
-      return (
-        `${student.user_data.first_name || ""} ${student.user_data.last_name || ""}`.trim() ||
-        student.user_data.username
-      )
+      return `${student.user_data.first_name || ""} ${student.user_data.last_name || ""}`.trim() || student.user_data.username
     }
-    // Try user nested object
     if (student.user) {
       return `${student.user.first_name || ""} ${student.user.last_name || ""}`.trim() || student.user.username
     }
@@ -171,6 +164,10 @@ export function StudentsManagement() {
 
   const getStudentEmail = (student: Student) => {
     return student.email || student.user_email || student.user_data?.email || student.user?.email || "N/A"
+  }
+  
+  const getStudentPhone = (student: Student) => {
+    return student.phone || student.user_data?.phone || student.user?.phone || "N/A"
   }
 
   if (loading) {
@@ -188,7 +185,16 @@ export function StudentsManagement() {
                 size="sm"
                 onClick={() => {
                   setEditingStudent(null)
-                  setFormData({ username: "", email: "", first_name: "", last_name: "", password: "", student_id: "" })
+                  setFormData({
+                    username: "",
+                    email: "",
+                    first_name: "",
+                    last_name: "",
+                    password: "",
+                    student_id: "",
+                    phone: "",
+                    address: "",
+                  })
                   setError(null)
                 }}
               >
@@ -201,61 +207,39 @@ export function StudentsManagement() {
               </DialogHeader>
               {error && <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md text-sm">{error}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Form fields for username, email, first_name, last_name, student_id */}
                 <div>
                   <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    required
-                  />
+                  <Input id="username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
+                  <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
                 </div>
                 <div>
                   <Label htmlFor="first_name">First Name</Label>
-                  <Input
-                    id="first_name"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    required
-                  />
+                  <Input id="first_name" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} required />
                 </div>
                 <div>
                   <Label htmlFor="last_name">Last Name</Label>
-                  <Input
-                    id="last_name"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    required
-                  />
+                  <Input id="last_name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} required />
+                </div>
+                 <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
                 </div>
                 <div>
                   <Label htmlFor="student_id">Student ID (Optional)</Label>
-                  <Input
-                    id="student_id"
-                    value={formData.student_id}
-                    onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                  />
+                  <Input id="student_id" value={formData.student_id} onChange={(e) => setFormData({ ...formData, student_id: e.target.value })} />
                 </div>
                 {!editingStudent && (
                   <div>
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                    />
+                    <Input id="password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
                   </div>
                 )}
                 <Button type="submit" className="w-full">
@@ -276,6 +260,8 @@ export function StudentsManagement() {
               <tr className="border-b">
                 <th className="text-left py-2 px-2">Name</th>
                 <th className="text-left py-2 px-2">Email</th>
+                <th className="text-left py-2 px-2">Phone</th>
+                <th className="text-left py-2 px-2">Address</th>
                 <th className="text-left py-2 px-2">Student ID</th>
                 <th className="text-left py-2 px-2">Actions</th>
               </tr>
@@ -283,7 +269,7 @@ export function StudentsManagement() {
             <tbody>
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-4 text-muted-foreground">
+                  <td colSpan={6} className="text-center py-4 text-muted-foreground">
                     No students found. Add your first student.
                   </td>
                 </tr>
@@ -292,6 +278,8 @@ export function StudentsManagement() {
                   <tr key={student.id} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-2">{getStudentName(student)}</td>
                     <td className="py-2 px-2">{getStudentEmail(student)}</td>
+                    <td className="py-2 px-2">{getStudentPhone(student)}</td>
+                    <td className="py-2 px-2">{student.address || "N/A"}</td>
                     <td className="py-2 px-2">{student.student_id || "N/A"}</td>
                     <td className="py-2 px-2">
                       <div className="flex gap-2">

@@ -62,11 +62,15 @@ export const academicsAPI = {
   updateTimetable: (id: number, data: any) => apiClient.put(`/academics/timetables/${id}/`, data),
   deleteTimetable: (id: number) => apiClient.delete(`/academics/timetables/${id}/`),
   classSubjects: () => apiClient.get("/academics/class-subjects/"),
-  createClass: (data: any) => apiClient.post("/academics/classes/", data),
+  createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
+  updateClassSubject: (id: number, data: any) => apiClient.put(`/academics/class-subjects/${id}/`, data),
+  deleteClassSubject: (id: number) => apiClient.delete(`/academics/class-subjects/${id}/`),
   createSubject: (data: any) => apiClient.post("/academics/subjects/", data),
   createFaculty: (data: any) => apiClient.post("/academics/faculties/", data),
   createDepartment: (data: any) => apiClient.post("/academics/departments/", data),
   createEnrollment: (data: any) => apiClient.post("/academics/enrollments/", data),
+  updateEnrollment: (id: number, data: any) => apiClient.put(`/academics/enrollments/${id}/`, data),
+  deleteEnrollment: (id: number) => apiClient.delete(`/academics/enrollments/${id}/`),
   createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
   updateClass: (id: number, data: any) => apiClient.put(`/academics/classes/${id}/`, data),
   updateSubject: (id: number, data: any) => apiClient.put(`/academics/subjects/${id}/`, data),
@@ -78,6 +82,7 @@ export const academicsAPI = {
   createCalendarEvent: (data: any) => apiClient.post("/academics/calendar-events/", data),
   updateCalendarEvent: (id: number, data: any) => apiClient.put(`/academics/calendar-events/${id}/`, data),
   deleteCalendarEvent: (id: number) => apiClient.delete(`/academics/calendar-events/${id}/`),
+  levels: () => apiClient.get("/academics/levels/"),
 }
 
 export const announcementsAPI = {
@@ -90,13 +95,13 @@ export const announcementsAPI = {
 export const attendanceAPI = {
   list: () => apiClient.get("/attendance/"),
   create: (data: any) => apiClient.post("/attendance/", data),
-  bulkCreate: (data: any) => apiClient.post("/attendance/bulk/", data),
+  bulkCreate: (data: any) => apiClient.post("/attendance/bulk_mark/", data),
+  studentReport: (studentId: number) => apiClient.get(`/attendance/student_report/?student_id=${studentId}`),
 }
 
 export const gradesAPI = {
   list: () => apiClient.get("/students/grades/"),
   create: (data: any) => apiClient.post("/students/grades/", data),
-  bulkCreate: (data: any) => apiClient.post("/students/grades/bulk/", data),
   update: (id: number, data: any) => apiClient.put(`/students/grades/${id}/`, data),
   delete: (id: number) => apiClient.delete(`/students/grades/${id}/`),
 }
@@ -230,4 +235,5 @@ export const assignmentAPI = {
   update: (id: number, data: any) => apiClient.put(`/assignments/${id}/`, data),
   delete: (id: number) => apiClient.delete(`/assignments/${id}/`),
   submissions: () => apiClient.get("/assignments/submissions/"),
+  gradeSubmission: (id: number, data: any) => apiClient.post(`/assignments/submissions/${id}/grade/`, data),
 }

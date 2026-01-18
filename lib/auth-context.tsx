@@ -1,10 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { authAPI } from "./api"
+import { authAPI, schoolsAPI } from "./api"
 
 interface User {
   id: number
@@ -16,8 +15,15 @@ interface User {
   school_id?: number
 }
 
+interface School {
+  id: number
+  name: string
+  // any other school properties can be added here
+}
+
 interface AuthContextType {
   user: User | null
+  school: School | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
@@ -28,8 +34,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [school, setSchool] = useState<School | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  const fetchSchool = async (school_id: number) => {
+    try {
+      const response = await schoolsAPI.list()
+      if (response && response.data) {
+        const schools = response.data.results || response.data || []
+        const currentSchool = schools.find((s: School) => s.id === school_id)
+        if (currentSchool) {
+          setSchool(currentSchool)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch school", error)
+    }
+  }
 
   const fetchUser = async () => {
     try {
@@ -39,12 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = response.data
         sessionStorage.setItem("user", JSON.stringify(userData))
         setUser(userData)
+        if (userData.school_id) {
+          await fetchSchool(userData.school_id)
+        }
       }
     } catch (error) {
       // If fetching user fails, it might mean the token is invalid
       sessionStorage.removeItem("authToken")
       sessionStorage.removeItem("user")
       setUser(null)
+      setSchool(null)
     } finally {
       setLoading(false)
     }
@@ -72,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.removeItem("user")
     authAPI.logout()
     setUser(null)
+    setSchool(null)
     router.push("/auth/login")
   }
 
@@ -83,13 +110,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem("authToken", access)
       sessionStorage.setItem("user", JSON.stringify(userData))
       setUser(userData)
+      if (userData.school_id) {
+        await fetchSchool(userData.school_id)
+      }
       router.push("/dashboard")
     } catch (error) {
       throw new Error("Registration failed")
     }
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout, register }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, school, loading, login, logout, register }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuthContext() {
