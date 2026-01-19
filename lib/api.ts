@@ -83,6 +83,38 @@ export const academicsAPI = {
   updateCalendarEvent: (id: number, data: any) => apiClient.put(`/academics/calendar-events/${id}/`, data),
   deleteCalendarEvent: (id: number) => apiClient.delete(`/academics/calendar-events/${id}/`),
   levels: () => apiClient.get("/academics/levels/"),
+  exams: () => apiClient.get("/academics/exams/"),
+  createExam: (data: any) => apiClient.post("/academics/exams/", data),
+  updateExam: (id: number, data: any) => apiClient.put(`/academics/exams/${id}/`, data),
+  deleteExam: (id: number) => apiClient.delete(`/academics/exams/${id}/`),
+  examResults: () => apiClient.get("/academics/exam-results/"),
+  createExamResult: (data: any) => apiClient.post("/academics/exam-results/", data),
+  updateExamResult: (id: number, data: any) => apiClient.put(`/academics/exam-results/${id}/`, data),
+  deleteExamResult: (id: number) => apiClient.delete(`/academics/exam-results/${id}/`),
+  schoolFees: () => apiClient.get("/academics/school-fees/"),
+  createSchoolFee: (data: any) => apiClient.post("/academics/school-fees/", data),
+  updateSchoolFee: (id: number, data: any) => apiClient.put(`/academics/school-fees/${id}/`, data),
+  deleteSchoolFee: (id: number) => apiClient.delete(`/academics/school-fees/${id}/`),
+  events: () => apiClient.get("/academics/events/"),
+  createEvent: (data: any) => apiClient.post("/academics/events/", data),
+  updateEvent: (id: number, data: any) => apiClient.put(`/academics/events/${id}/`, data),
+  deleteEvent: (id: number) => apiClient.delete(`/academics/events/${id}/`),
+  documents: () => apiClient.get("/academics/documents/"),
+  createDocument: (data: FormData) =>
+    apiClient.post("/academics/documents/", data, { headers: { "Content-Type": "multipart/form-data" } }),
+  updateDocument: (id: number, data: FormData) =>
+    apiClient.put(`/academics/documents/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
+  deleteDocument: (id: number) => apiClient.delete(`/academics/documents/${id}/`),
+  notices: () => apiClient.get("/academics/notices/"),
+  createNotice: (data: any) => apiClient.post("/academics/notices/", data),
+  updateNotice: (id: number, data: any) => apiClient.put(`/academics/notices/${id}/`, data),
+  deleteNotice: (id: number) => apiClient.delete(`/academics/notices/${id}/`),
+  profilePictures: () => apiClient.get("/academics/profile-pictures/"),
+  createProfilePicture: (data: FormData) =>
+    apiClient.post("/academics/profile-pictures/", data, { headers: { "Content-Type": "multipart/form-data" } }),
+  updateProfilePicture: (id: number, data: FormData) =>
+    apiClient.put(`/academics/profile-pictures/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
+  deleteProfilePicture: (id: number) => apiClient.delete(`/academics/profile-pictures/${id}/`),
 }
 
 export const announcementsAPI = {

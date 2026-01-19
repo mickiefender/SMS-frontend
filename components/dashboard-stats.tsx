@@ -18,8 +18,8 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
     { label: "Teachers", value: stats.teachers, icon: UserCheck, color: "bg-blue-100", textColor: "text-blue-600" },
     { label: "Parents", value: stats.parents, icon: Users2, color: "bg-yellow-100", textColor: "text-yellow-600" },
     {
-      label: "Total Earnings",
-      value: `$${stats.earnings.toLocaleString()}`,
+      label: "Total Revenue",
+      value: `¢${stats.earnings.toLocaleString()}`,
       icon: DollarSign,
       color: "bg-teal-100",
       textColor: "text-teal-600",

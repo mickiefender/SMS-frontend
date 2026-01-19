@@ -59,7 +59,7 @@ const navSections: Record<string, NavSection[]> = {
       items: [
         { label: "Students", href: "/dashboard/school-admin/students", icon: Users },
         { label: "Teachers", href: "/dashboard/school-admin/teachers", icon: User },
-        { label: "Parents", href: "/dashboard/school-admin/parents", icon: HeartHandshake },
+        
       ],
     },
     {

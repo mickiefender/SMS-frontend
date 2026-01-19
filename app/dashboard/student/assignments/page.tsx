@@ -18,11 +18,14 @@ export default function AssignmentsPage() {
     const fetchAssignments = async () => {
       try {
         setLoading(true)
-        const res = await apiClient.get("/students/student-portal/assignments/")
-        setAssignments(res.data || [])
+        setError("")
+        console.log("[v0] Fetching assignments...")
+        const res = await apiClient.get("/students/portal/assignments/")
+        console.log("[v0] Assignments response:", res.data)
+        setAssignments(Array.isArray(res.data) ? res.data : [])
       } catch (err: any) {
-        setError("Failed to load assignments")
-        console.error("[v0] Failed to fetch assignments:", err)
+        console.error("[v0] Failed to fetch assignments:", err?.response?.data || err?.message)
+        setError("Failed to load assignments. Please try refreshing the page.")
       } finally {
         setLoading(false)
       }
@@ -32,6 +35,29 @@ export default function AssignmentsPage() {
   }, [])
 
   if (loading) return <div className="p-8">Loading...</div>
+
+  if (error) {
+    return (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <div className="p-8 space-y-6">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/student">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-bold">My Assignments</h1>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded p-4">
+            <p className="text-red-600">{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute allowedRoles={["student"]}>
@@ -44,8 +70,6 @@ export default function AssignmentsPage() {
           </Link>
           <h1 className="text-3xl font-bold">My Assignments</h1>
         </div>
-
-        {error && <div className="text-red-500">{error}</div>}
 
         <div className="grid grid-cols-1 gap-4">
           {assignments.length > 0 ? (

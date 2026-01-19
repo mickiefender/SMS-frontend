@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { usersAPI } from "@/lib/api"
 import { DashboardStats } from "@/components/dashboard-stats"
 import { FeesChart } from "@/components/fees-chart"
+import { ClassPerformanceAnalytics } from "@/components/class-performance-analytics"
 import { EventCalendar } from "@/components/event-calendar"
 import { NoticeBoard } from "@/components/notice-board"
 import { RecentActivities } from "@/components/recent-activities"
@@ -34,7 +35,7 @@ export default function SchoolAdminPage() {
           students: studentsRes?.data?.results?.length || 0,
           teachers: teachersRes?.data?.results?.length || 0,
           parents: 0,
-          earnings: 30000,
+          earnings: 7500000, // Changed to GHS (Ghanaian Cedis)
           loading: false,
         })
       } catch (error) {
@@ -60,40 +61,25 @@ export default function SchoolAdminPage() {
                 <FeesChart />
               </div>
 
-              {/* Social Media Stats - 2x2 grid on mobile, side by side on desktop */}
-              <div className="md:col-span-1 lg:col-span-2">
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div className="bg-blue-600 text-white p-4 md:p-6 rounded-lg">
-                    <div className="text-xs md:text-sm mb-2">Like us on Facebook</div>
-                    <div className="text-2xl md:text-3xl font-bold">30,000</div>
-                  </div>
-                  <div className="bg-blue-400 text-white p-4 md:p-6 rounded-lg">
-                    <div className="text-xs md:text-sm mb-2">Follow us on Twitter</div>
-                    <div className="text-2xl md:text-3xl font-bold">13,000</div>
-                  </div>
-                  <div className="bg-red-600 text-white p-4 md:p-6 rounded-lg">
-                    <div className="text-xs md:text-sm mb-2">Follow us on Google Plus</div>
-                    <div className="text-2xl md:text-3xl font-bold">9,000</div>
-                  </div>
-                  <div className="bg-blue-700 text-white p-4 md:p-6 rounded-lg">
-                    <div className="text-xs md:text-sm mb-2">Follow us on LinkedIn</div>
-                    <div className="text-2xl md:text-3xl font-bold">18,000</div>
-                  </div>
+              {/* Calendar and Notice Board */}
+              <div className="md:col-span-2 space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
+                <div>
+                  <EventCalendar />
+                </div>
+                <div>
+                  <NoticeBoard />
                 </div>
               </div>
             </div>
 
-            {/* Calendar and Notice Board Row - full width on mobile, 3 cols on desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              <div>
-                <EventCalendar />
-              </div>
-              <div>
-                <NoticeBoard />
-              </div>
-              <div>
-                <RecentActivities />
-              </div>
+            {/* Class Performance Analytics - Full Width */}
+            <div className="w-full">
+              <ClassPerformanceAnalytics />
+            </div>
+
+            {/* Recent Activities */}
+            <div className="w-full">
+              <RecentActivities />
             </div>
           </>
         )}
