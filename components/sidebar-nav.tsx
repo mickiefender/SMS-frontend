@@ -31,6 +31,8 @@ import {
   BarChart,
   ClipboardCheck,
   FilePen,
+  UploadCloud,
+  MessageCircle,
 } from "lucide-react"
 
 type NavItem = {
@@ -104,20 +106,26 @@ const navSections: Record<string, NavSection[]> = {
       href: "/dashboard/school-admin#account",
     },
   ],
+  
   teacher: [
     {
       label: "Dashboard",
-      icon: LayoutDashboard,
+      icon: ClipboardEdit,
       href: "/dashboard/teacher",
     },
     {
       label: "Teaching",
-      icon: BookUser,
+      icon: User,
       items: [
+        { label: "Overview", href: "/dashboard/teacher", icon: User },
         { label: "My Classes", href: "/dashboard/teacher/my-classes", icon: School },
         { label: "Attendance", href: "/dashboard/teacher/attendance", icon: CheckSquare },
-        { label: "Grades", href: "/dashboard/teacher/grades", icon: BarChart },
+        { label: "Grades", href: "/dashboard/teacher/grades", icon: ClipboardEdit },
         { label: "Assignments", href: "/dashboard/teacher/assignments", icon: ClipboardCheck },
+        { label: "Submissions", href: "/dashboard/teacher/submissions", icon: BookOpen },
+        { label: "Performance", href: "/dashboard/teacher/performance", icon: BarChart},
+        { label: "Materials", href: "/dashboard/teacher/materials", icon: UploadCloud },
+        { label: "Messages", href: "/dashboard/teacher/messages", icon: MessageCircle },
       ],
     },
   ],

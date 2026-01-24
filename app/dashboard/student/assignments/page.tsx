@@ -20,7 +20,7 @@ export default function AssignmentsPage() {
         setLoading(true)
         setError("")
         console.log("[v0] Fetching assignments...")
-        const res = await apiClient.get("/students/portal/assignments/")
+        const res = await apiClient.get("/assignments/")
         console.log("[v0] Assignments response:", res.data)
         setAssignments(Array.isArray(res.data) ? res.data : [])
       } catch (err: any) {

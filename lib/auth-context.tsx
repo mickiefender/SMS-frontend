@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { authAPI, schoolsAPI } from "./api"
@@ -13,19 +14,20 @@ interface User {
   last_name: string
   role: "super_admin" | "school_admin" | "teacher" | "student"
   school_id?: number
+  student_id?: string
 }
 
 interface School {
   id: number
   name: string
-  // any other school properties can be added here
+  // Add other school properties as needed
 }
 
 interface AuthContextType {
   user: User | null
   school: School | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (credential: string, password:string, loginType?: "email" | "student_id") => Promise<void>
   logout: () => void
   register: (data: any) => Promise<void>
 }
@@ -38,55 +40,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const fetchSchool = async (school_id: number) => {
+  const fetchSchool = async (schoolId: number) => {
     try {
-      const response = await schoolsAPI.list()
-      if (response && response.data) {
-        const schools = response.data.results || response.data || []
-        const currentSchool = schools.find((s: School) => s.id === school_id)
-        if (currentSchool) {
-          setSchool(currentSchool)
-        }
-      }
+      const response = await schoolsAPI.getById(schoolId)
+      setSchool(response.data)
     } catch (error) {
-      console.error("Failed to fetch school", error)
-    }
-  }
-
-  const fetchUser = async () => {
-    try {
-      const token = sessionStorage.getItem("authToken")
-      if (token) {
-        const response = await authAPI.me()
-        const userData = response.data
-        sessionStorage.setItem("user", JSON.stringify(userData))
-        setUser(userData)
-        if (userData.school_id) {
-          await fetchSchool(userData.school_id)
-        }
-      }
-    } catch (error) {
-      // If fetching user fails, it might mean the token is invalid
-      sessionStorage.removeItem("authToken")
-      sessionStorage.removeItem("user")
-      setUser(null)
-      setSchool(null)
-    } finally {
-      setLoading(false)
+      console.error("Failed to fetch school data", error)
+      // Handle error appropriately
     }
   }
 
   useEffect(() => {
-    fetchUser()
+    const token = sessionStorage.getItem("authToken")
+    const storedUser = sessionStorage.getItem("user")
+
+    if (token && storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser)
+        setUser(parsedUser)
+        if (parsedUser.school_id) {
+          fetchSchool(parsedUser.school_id)
+        }
+      } catch (error) {
+        sessionStorage.removeItem("authToken")
+        sessionStorage.removeItem("user")
+      }
+    }
+    setLoading(false)
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (credential: string, password: string, loginType: "email" | "student_id" = "email") => {
     try {
-      const response = await authAPI.login({ email, password })
-      const { access } = response.data
+      const loginData = loginType === "email" 
+        ? { email: credential, password } 
+        : { student_id: credential, password }
+      
+      const response = await authAPI.login(loginData)
+      const { access, user: userData } = response.data
 
       sessionStorage.setItem("authToken", access)
-      await fetchUser() // Fetch user data after setting token
+      sessionStorage.setItem("user", JSON.stringify(userData))
+      setUser(userData)
+
+      if (userData.school_id) {
+        await fetchSchool(userData.school_id)
+      }
+
       router.push("/dashboard")
     } catch (error) {
       throw new Error("Login failed")
@@ -110,20 +109,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem("authToken", access)
       sessionStorage.setItem("user", JSON.stringify(userData))
       setUser(userData)
-      if (userData.school_id) {
-        await fetchSchool(userData.school_id)
-      }
       router.push("/dashboard")
     } catch (error) {
       throw new Error("Registration failed")
     }
   }
 
-  return (
-    <AuthContext.Provider value={{ user, school, loading, login, logout, register }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={{ user, school, loading, login, logout, register }}>{children}</AuthContext.Provider>
 }
 
 export function useAuthContext() {

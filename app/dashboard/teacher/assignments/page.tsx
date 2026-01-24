@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, Suspense } from "react"
-import { academicsAPI } from "@/lib/api"
+import { academicsAPI, assignmentAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -26,7 +26,7 @@ function AssignmentsContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [assignRes, classRes] = await Promise.all([academicsAPI.assignments(), academicsAPI.classes()])
+        const [assignRes, classRes] = await Promise.all([assignmentAPI.list(), academicsAPI.classes()])
         setAssignments(assignRes.data.results || assignRes.data || [])
         setClasses(classRes.data.results || classRes.data || [])
       } catch (error) {
@@ -41,7 +41,7 @@ function AssignmentsContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await academicsAPI.createAssignment(formData)
+      await assignmentAPI.create(formData)
       setIsOpen(false)
       setFormData({ title: "", class_obj: "", description: "", due_date: "" })
     } catch (error) {

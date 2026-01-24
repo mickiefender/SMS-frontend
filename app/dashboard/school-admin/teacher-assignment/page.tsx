@@ -2,349 +2,182 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { academicsAPI, usersAPI } from "@/lib/api"
+import { academicsAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2, Edit2, Search, Plus } from "lucide-react"
-import { Suspense } from "react"
+import { Search, Users, ArrowRight, AlertCircle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AssignTeachersToClass } from "@/components/assign-teachers-to-class"
+import { AssignSubjectTeachers } from "@/components/assign-subject-teachers"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-interface ClassSubject {
-  id: number
-  class_obj: number
-  class_name: string
-  subject: number
-  subject_name: string
-  subject_code: string
-  teacher: number | null
-  teacher_name: string | null
-  created_at: string
-}
-
-interface Teacher {
-  id: number
-  user: number
-  first_name: string
-  last_name: string
-  email: string
-  user_email?: string
-}
-
-interface ClassData {
-  id: number
-  name: string
-}
-
-interface Subject {
+interface Class {
   id: number
   name: string
   code: string
+  level?: string
+  capacity?: number
 }
 
-function TeacherAssignmentsContent() {
-  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([])
-  const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [classes, setClasses] = useState<ClassData[]>([])
-  const [subjects, setSubjects] = useState<Subject[]>([])
+export default function TeacherAssignmentsPage() {
+  const [classes, setClasses] = useState<Class[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isOpen, setIsOpen] = useState(false)
-  const [editingClassSubject, setEditingClassSubject] = useState<ClassSubject | null>(null)
-  const [formData, setFormData] = useState({ class_obj: "", subject: "", teacher: "" })
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null)
+  const [selectedClassName, setSelectedClassName] = useState<string>("")
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("class-teachers")
 
-  const itemsPerPage = 10
+  useEffect(() => {
+    fetchClasses()
+  }, [])
 
-  const fetchData = async () => {
+  const fetchClasses = async () => {
     try {
       setLoading(true)
-      const [csRes, teachRes, classRes, subjRes] = await Promise.all([
-        academicsAPI.classSubjects(),
-        usersAPI.teachers(),
-        academicsAPI.classes(),
-        academicsAPI.subjects(),
-      ])
-
-      console.log("[v0] Teachers response:", teachRes.data)
-      setClassSubjects(csRes.data.results || csRes.data || [])
-      setTeachers(teachRes.data.results || teachRes.data || [])
-      setClasses(classRes.data.results || classRes.data || [])
-      setSubjects(subjRes.data.results || subjRes.data || [])
       setError(null)
+      const response = await academicsAPI.classes()
+      setClasses(response.data.results || response.data || [])
     } catch (err: any) {
-      console.error("[v0] Failed to fetch data:", err?.response?.data || err?.message)
-      setError("Failed to load data")
+      console.error("[v0] Error fetching classes:", err)
+      setError("Failed to load classes")
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      if (!formData.class_obj || !formData.subject) {
-        setError("Please select a class and subject")
-        return
-      }
-
-      const data = {
-        class_obj: Number.parseInt(formData.class_obj),
-        subject: Number.parseInt(formData.subject),
-        teacher: formData.teacher ? Number.parseInt(formData.teacher) : null,
-      }
-
-      console.log("[v0] Submitting class subject data:", data)
-
-      if (editingClassSubject) {
-        await academicsAPI.updateClassSubject(editingClassSubject.id, data)
-      } else {
-        await academicsAPI.createClassSubject(data)
-      }
-
-      setIsOpen(false)
-      setEditingClassSubject(null)
-      setFormData({ class_obj: "", subject: "", teacher: "" })
-      setError(null)
-      fetchData()
-    } catch (err: any) {
-      console.log("[v0] Error details:", err?.response?.data)
-      setError(err?.response?.data?.detail || JSON.stringify(err?.response?.data) || "Failed to save assignment")
-    }
-  }
-
-  const handleEdit = (cs: ClassSubject) => {
-    setEditingClassSubject(cs)
-    setFormData({
-      class_obj: cs.class_obj.toString(),
-      subject: cs.subject.toString(),
-      teacher: cs.teacher?.toString() || "",
-    })
-    setIsOpen(true)
-  }
-
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to remove this teacher assignment?")) {
-      try {
-        await academicsAPI.deleteClassSubject(id)
-        fetchData()
-      } catch (err) {
-        setError("Failed to delete assignment")
-      }
-    }
-  }
-
-  const filteredClassSubjects = classSubjects.filter(
-    (cs) =>
-      cs.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cs.subject_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cs.teacher_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      false,
+  const filteredClasses = classes.filter(
+    (cls) =>
+      cls.name.toLowerCase().includes(searchTerm.toLowerCase()) 
+      
   )
 
-  const totalPages = Math.ceil(filteredClassSubjects.length / itemsPerPage)
-  const paginatedClassSubjects = filteredClassSubjects.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  )
-
-  if (loading) {
-    return <div className="text-center py-12">Loading...</div>
+  const handleSelectClass = (classItem: Class) => {
+    setSelectedClassId(classItem.id)
+    setSelectedClassName(classItem.name)
+    setDialogOpen(true)
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-purple-700">Teacher Assignments</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              onClick={() => {
-                setEditingClassSubject(null)
-                setFormData({ class_obj: "", subject: "", teacher: "" })
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" /> Assign Teacher
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingClassSubject ? "Edit Assignment" : "Assign Teacher to Class-Subject"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="class_obj">Class</Label>
-                <select
-                  id="class_obj"
-                  value={formData.class_obj}
-                  onChange={(e) => setFormData({ ...formData, class_obj: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                  required
-                >
-                  <option value="">Select Class</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <select
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                  required
-                >
-                  <option value="">Select Subject</option>
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="teacher">Teacher (Optional)</Label>
-                <select
-                  id="teacher"
-                  value={formData.teacher}
-                  onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="">Select Teacher (Optional)</option>
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.user}>
-                      {t.first_name} {t.last_name} ({t.email || t.user_email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
-                {editingClassSubject ? "Update" : "Assign"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+    <div className="space-y-6 pb-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900">Teacher Assignments</h1>
+          <p className="text-gray-600 mt-1">Assign teachers to classes and subjects</p>
+        </div>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>}
-
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center gap-2 mb-6 bg-gray-100 rounded-lg px-4 py-2">
-          <Search className="w-5 h-5 text-gray-500" />
-          <Input
-            placeholder="Search by class, subject, or teacher..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="border-0 bg-transparent focus:outline-none"
-          />
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-purple-100">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">CLASS</th>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">SUBJECT</th>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">SUBJECT CODE</th>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">ASSIGNED TEACHER</th>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">CREATED DATE</th>
-                <th className="px-4 py-3 text-left font-semibold text-purple-700">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedClassSubjects.map((cs) => (
-                <tr key={cs.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3">{cs.class_name}</td>
-                  <td className="px-4 py-3">{cs.subject_name}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{cs.subject_code}</td>
-                  <td className="px-4 py-3">
-                    {cs.teacher_name ? (
-                      <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs">
-                        {cs.teacher_name}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500 italic">Unassigned</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{new Date(cs.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <button
-                      onClick={() => handleEdit(cs)}
-                      className="text-blue-600 hover:text-blue-800 p-1"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cs.id)}
-                      className="text-red-600 hover:text-red-800 p-1"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex justify-between items-center mt-6">
-          <span className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages} | Total: {filteredClassSubjects.length}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => (
-              <Button
-                key={i + 1}
-                variant={currentPage === i + 1 ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(i + 1)}
-                className={currentPage === i + 1 ? "bg-purple-600" : ""}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded flex items-start gap-3">
+          <AlertCircle className="text-red-600 mt-0.5 flex-shrink-0" size={20} />
+          <div>
+            <p className="text-red-800 font-medium">Error</p>
+            <p className="text-red-700 text-sm">{error}</p>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
+      )}
 
-export default function TeacherAssignmentsPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <TeacherAssignmentsContent />
-    </Suspense>
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3.5 text-gray-400" size={20} />
+        <Input
+          placeholder="Search classes by name or code..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-11 border-gray-300"
+        />
+      </div>
+
+      {/* Classes Grid */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600 mt-4">Loading classes...</p>
+        </div>
+      ) : filteredClasses.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-12 text-center">
+            <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-600 font-medium">No classes found</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {searchTerm ? "Try adjusting your search criteria" : "Create classes first"}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredClasses.map((classItem) => (
+            <Card key={classItem.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
+                      {classItem.name}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 mt-1">Code: #{classItem.code}</p>
+                  </div>
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <Users size={20} className="text-purple-600" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Level:</span>
+                  <span className="font-medium text-gray-900">{classItem.level || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Capacity:</span>
+                  <span className="font-medium text-gray-900">{classItem.capacity || "—"}</span>
+                </div>
+                <Dialog open={dialogOpen && selectedClassId === classItem.id} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => handleSelectClass(classItem)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                    >
+                      Manage Teachers
+                      <ArrowRight size={16} />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl">
+                        Teacher Management for <span className="text-blue-600">{selectedClassName}</span>
+                      </DialogTitle>
+                    </DialogHeader>
+                    {selectedClassId && (
+                      <Tabs defaultValue="class-teachers" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                          <TabsTrigger value="class-teachers">Class Teachers</TabsTrigger>
+                          <TabsTrigger value="subject-teachers">Subject Teachers</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="class-teachers" className="space-y-4">
+                          <div className="text-sm text-gray-600 mb-4">
+                            Assign main teachers who manage the entire class
+                          </div>
+                          <AssignTeachersToClass classId={selectedClassId} className={selectedClassName} />
+                        </TabsContent>
+                        <TabsContent value="subject-teachers" className="space-y-4">
+                          <div className="text-sm text-gray-600 mb-4">
+                            Assign teachers to specific subjects within this class
+                          </div>
+                          <AssignSubjectTeachers classId={selectedClassId} className={selectedClassName} />
+                        </TabsContent>
+                      </Tabs>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

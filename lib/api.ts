@@ -34,7 +34,7 @@ apiClient.interceptors.response.use(
 )
 
 export const authAPI = {
-  login: (credentials: { email: string; password: string }) => apiClient.post("/users/auth/login/", credentials),
+  login: (credentials: { email?: string; student_id?: string; password: string }) => apiClient.post("/users/auth/login/", credentials),
   register: (data: any) => apiClient.post("/users/auth/register/", data),
   logout: () => {
     sessionStorage.removeItem("authToken")
@@ -44,6 +44,7 @@ export const authAPI = {
 }
 
 export const schoolsAPI = {
+  getById: (id: number) => apiClient.get(`/schools/schools/${id}/`),
   list: () => apiClient.get("/schools/schools/"),
   create: (data: any) => apiClient.post("/schools/schools/", data),
   update: (id: number, data: any) => apiClient.put(`/schools/schools/${id}/`, data),
@@ -61,6 +62,25 @@ export const academicsAPI = {
   createTimetable: (data: any) => apiClient.post("/academics/timetables/", data),
   updateTimetable: (id: number, data: any) => apiClient.put(`/academics/timetables/${id}/`, data),
   deleteTimetable: (id: number) => apiClient.delete(`/academics/timetables/${id}/`),
+  
+  // Class Teachers (assignment of teachers to classes)
+  classTeachers: () => apiClient.get("/academics/class-teachers/"),
+  createClassTeacher: (data: any) => apiClient.post("/academics/class-teachers/", data),
+  updateClassTeacher: (id: number, data: any) => apiClient.put(`/academics/class-teachers/${id}/`, data),
+  deleteClassTeacher: (id: number) => apiClient.delete(`/academics/class-teachers/${id}/`),
+  
+  // Student Classes (student enrollment in classes)
+  studentClasses: () => apiClient.get("/academics/student-classes/"),
+  createStudentClass: (data: any) => apiClient.post("/academics/student-classes/", data),
+  updateStudentClass: (id: number, data: any) => apiClient.put(`/academics/student-classes/${id}/`, data),
+  deleteStudentClass: (id: number) => apiClient.delete(`/academics/student-classes/${id}/`),
+  
+  // Class Subject Teachers (subject assignment for teachers in classes)
+  classSubjectTeachers: () => apiClient.get("/academics/class-subject-teachers/"),
+  createClassSubjectTeacher: (data: any) => apiClient.post("/academics/class-subject-teachers/", data),
+  updateClassSubjectTeacher: (id: number, data: any) => apiClient.put(`/academics/class-subject-teachers/${id}/`, data),
+  deleteClassSubjectTeacher: (id: number) => apiClient.delete(`/academics/class-subject-teachers/${id}/`),
+  
   classSubjects: () => apiClient.get("/academics/class-subjects/"),
   createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
   updateClassSubject: (id: number, data: any) => apiClient.put(`/academics/class-subjects/${id}/`, data),
@@ -68,10 +88,10 @@ export const academicsAPI = {
   createSubject: (data: any) => apiClient.post("/academics/subjects/", data),
   createFaculty: (data: any) => apiClient.post("/academics/faculties/", data),
   createDepartment: (data: any) => apiClient.post("/academics/departments/", data),
+  createClass: (data: any) => apiClient.post("/academics/classes/", data),
   createEnrollment: (data: any) => apiClient.post("/academics/enrollments/", data),
   updateEnrollment: (id: number, data: any) => apiClient.put(`/academics/enrollments/${id}/`, data),
   deleteEnrollment: (id: number) => apiClient.delete(`/academics/enrollments/${id}/`),
-  createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
   updateClass: (id: number, data: any) => apiClient.put(`/academics/classes/${id}/`, data),
   updateSubject: (id: number, data: any) => apiClient.put(`/academics/subjects/${id}/`, data),
   updateFaculty: (id: number, data: any) => apiClient.put(`/academics/faculties/${id}/`, data),
@@ -83,6 +103,9 @@ export const academicsAPI = {
   updateCalendarEvent: (id: number, data: any) => apiClient.put(`/academics/calendar-events/${id}/`, data),
   deleteCalendarEvent: (id: number) => apiClient.delete(`/academics/calendar-events/${id}/`),
   levels: () => apiClient.get("/academics/levels/"),
+  createLevel: (data: any) => apiClient.post("/academics/levels/", data),
+  updateLevel: (id: number, data: any) => apiClient.put(`/academics/levels/${id}/`, data),
+  deleteLevel: (id: number) => apiClient.delete(`/academics/levels/${id}/`),
   exams: () => apiClient.get("/academics/exams/"),
   createExam: (data: any) => apiClient.post("/academics/exams/", data),
   updateExam: (id: number, data: any) => apiClient.put(`/academics/exams/${id}/`, data),
@@ -222,9 +245,9 @@ export const usersAPI = {
       }
 
       // Step 2: Create StudentProfile linked to the user
+      // Note: student_id will be auto-generated in the backend model's save() method
       const profileData = {
         user: userId,
-        student_id: data.student_id || `STU${userId}`,
         level: data.level || null,
         department: data.department || null,
       }
