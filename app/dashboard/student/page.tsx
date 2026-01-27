@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { academicsAPI, authAPI } from "@/lib/api"
-import { BookOpen, DollarSign, Calendar, FileText, Bell, Edit2, Download, Share2 } from "lucide-react"
+import { academicsAPI, authAPI, assignmentAPI } from "@/lib/api"
+import { BookOpen, DollarSign, Calendar, FileText, Bell, Edit2, Download, Share2, ClipboardList } from "lucide-react"
 import Image from "next/image"
+import Loader from '@/components/loader'
 
 interface DashboardData {
   upcomingExams: any[]
@@ -16,17 +17,19 @@ interface DashboardData {
   notices: any[]
   examResults: any[]
   schoolFees: any[]
+  assignments: any[]
 }
 
 export default function StudentDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [profilePic, setProfilePic] = useState<string>("")
+  const [assignments, setAssignments] = useState<any[]>([])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [user, exams, fees, events, documents, notices, results] = await Promise.all([
+        const [user, exams, fees, events, documents, notices, results, assignmentsRes] = await Promise.all([
           authAPI.me(),
           academicsAPI.exams(),
           academicsAPI.schoolFees(),
@@ -34,6 +37,7 @@ export default function StudentDashboard() {
           academicsAPI.documents(),
           academicsAPI.notices(),
           academicsAPI.examResults(),
+          assignmentAPI.studentAssignments(),
         ])
 
         // Get upcoming exams
@@ -49,6 +53,8 @@ export default function StudentDashboard() {
         const allDocuments = documents.data.results || documents.data || []
         const allNotices = (notices.data.results || notices.data || []).slice(0, 5)
         const allResults = (results.data.results || results.data || []).slice(0, 6)
+        const allAssignments = assignmentsRes.data.results || assignmentsRes.data || []
+        setAssignments(allAssignments)
 
         setData({
           upcomingExams,
@@ -59,8 +65,9 @@ export default function StudentDashboard() {
           notices: allNotices,
           examResults: allResults,
           schoolFees: allFees,
+          assignments: allAssignments,
         })
-
+      
         // Fetch profile picture
         try {
           const picRes = await academicsAPI.profilePictures()
@@ -82,9 +89,9 @@ export default function StudentDashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
-  }
+  useEffect(() => {
+    // TODO: Fetch grades data here
+  }, [])
 
   const cards = [
     {
@@ -93,17 +100,18 @@ export default function StudentDashboard() {
       icon: BookOpen,
       bgColor: "bg-green-500",
     },
+
     {
       title: "Due Fees",
-      count: `$${(data?.dueFees || 0).toFixed(2)}`,
+      count: `${(data?.dueFees || 0).toFixed(2)}`,
       icon: DollarSign,
       bgColor: "bg-red-500",
     },
     {
-      title: "Events",
-      count: data?.events?.length || 0,
-      icon: Calendar,
-      bgColor: "bg-blue-500",
+      title: "Assignments",
+      count: assignments.length,
+      icon: ClipboardList,
+      bgColor: "bg-purple-500",
     },
     {
       title: "Documents",
@@ -258,6 +266,29 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* My Assignments Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>My Assignments</CardTitle>
+          <CardDescription>All your assignments are listed here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {assignments.map((assignment) => (
+              <div key={assignment.id} className="border p-4 rounded-lg flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold">{assignment.title}</h3>
+                  <p className="text-sm text-gray-500">
+                    {assignment.subject_name} - Due: {new Date(assignment.due_date).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button>Submit</Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Exam Results Section */}
       <Card className="mt-6">
         <CardHeader>
@@ -315,3 +346,4 @@ export default function StudentDashboard() {
     </div>
   )
 }
+

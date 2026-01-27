@@ -9,7 +9,7 @@ interface Grade {
   id: number
   student: number
   subject: number
-  assessment_type: "exam" | "test" | "quiz" | "continuous" | "assignment"
+  assessment_type: "exam" | "test" | "quiz" | "continuous" | "assignment" | "Exercise"
   score: number
   max_score: number
   percentage: number

@@ -25,7 +25,7 @@ export function TopBar() {
       <div className="flex items-center gap-6">
         {/* Search Bar */}
         <div className="hidden md:flex items-center bg-[#f5f5f5] rounded-lg px-4 py-2 w-64">
-          <span className="text-[#999]">🔍</span>
+          <span className="text-[#999]"></span>
           <input
             type="text"
             placeholder="Search here ..."

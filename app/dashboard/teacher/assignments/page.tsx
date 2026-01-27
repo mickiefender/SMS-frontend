@@ -9,16 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Plus, Calendar } from "lucide-react"
+import Loader from "@/components/loader"
 
 function AssignmentsContent() {
   const [assignments, setAssignments] = useState<any[]>([])
   const [classes, setClasses] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     class_obj: "",
+    subject: "",
     description: "",
     due_date: "",
   })
@@ -26,9 +29,14 @@ function AssignmentsContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [assignRes, classRes] = await Promise.all([assignmentAPI.list(), academicsAPI.classes()])
+        const [assignRes, classRes, subjectRes] = await Promise.all([
+          assignmentAPI.list(),
+          academicsAPI.classes(),
+          academicsAPI.subjects(),
+        ])
         setAssignments(assignRes.data.results || assignRes.data || [])
         setClasses(classRes.data.results || classRes.data || [])
+        setSubjects(subjectRes.data.results || subjectRes.data || [])
       } catch (error) {
         console.error("Failed to fetch:", error)
       } finally {
@@ -41,18 +49,26 @@ function AssignmentsContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await assignmentAPI.create(formData)
+      const dataToSend = {
+        ...formData,
+        due_date: `${formData.due_date}T23:59:59`,
+      }
+      await assignmentAPI.create(dataToSend)
       setIsOpen(false)
-      setFormData({ title: "", class_obj: "", description: "", due_date: "" })
+      setFormData({ title: "", class_obj: "", subject: "", description: "", due_date: "" })
     } catch (error) {
       console.error("Failed to create assignment:", error)
     }
   }
 
   const filteredAssignments = assignments.filter((a) => a.title.toLowerCase().includes(searchTerm.toLowerCase()))
-
-  if (loading) return <div className="text-center py-8">Loading assignments...</div>
-
+if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#3b82f6" />
+    </div>
+  )
+}
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -91,6 +107,22 @@ function AssignmentsContent() {
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Subject</Label>
+                <select
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  className="w-full px-3 py-2 border rounded"
+                  required
+                >
+                  <option value="">Select subject</option>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -137,7 +169,9 @@ function AssignmentsContent() {
             <div key={a.id} className="border rounded-lg p-4 hover:shadow-lg transition-shadow">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg text-gray-900">{a.title}</h3>
-                <span className="bg-red-100 text-red-800 px-3 py-1 rounded text-sm">Class {a.class_obj}</span>
+                <span className="bg-red-100 text-red-800 px-3 py-1 rounded text-sm">
+                  Class {a.class_name} - {a.subject_name}
+                </span>
               </div>
               <p className="text-gray-600 text-sm mb-3">{a.description}</p>
               <div className="flex items-center gap-2 text-sm text-gray-600">

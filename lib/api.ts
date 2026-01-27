@@ -34,7 +34,8 @@ apiClient.interceptors.response.use(
 )
 
 export const authAPI = {
-  login: (credentials: { email?: string; student_id?: string; password: string }) => apiClient.post("/users/auth/login/", credentials),
+  login: (credentials: { email?: string; student_id?: string; password: string }) =>
+    apiClient.post("/users/auth/login/", credentials),
   register: (data: any) => apiClient.post("/users/auth/register/", data),
   logout: () => {
     sessionStorage.removeItem("authToken")
@@ -57,30 +58,31 @@ export const academicsAPI = {
   departments: () => apiClient.get("/academics/departments/"),
   classes: () => apiClient.get("/academics/classes/"),
   subjects: () => apiClient.get("/academics/subjects/"),
+  teachers: () => apiClient.get("/users/teachers/"),
   enrollments: () => apiClient.get("/academics/enrollments/"),
   timetables: () => apiClient.get("/academics/timetables/"),
   createTimetable: (data: any) => apiClient.post("/academics/timetables/", data),
   updateTimetable: (id: number, data: any) => apiClient.put(`/academics/timetables/${id}/`, data),
   deleteTimetable: (id: number) => apiClient.delete(`/academics/timetables/${id}/`),
-  
+
   // Class Teachers (assignment of teachers to classes)
   classTeachers: () => apiClient.get("/academics/class-teachers/"),
   createClassTeacher: (data: any) => apiClient.post("/academics/class-teachers/", data),
   updateClassTeacher: (id: number, data: any) => apiClient.put(`/academics/class-teachers/${id}/`, data),
   deleteClassTeacher: (id: number) => apiClient.delete(`/academics/class-teachers/${id}/`),
-  
+
   // Student Classes (student enrollment in classes)
   studentClasses: () => apiClient.get("/academics/student-classes/"),
   createStudentClass: (data: any) => apiClient.post("/academics/student-classes/", data),
   updateStudentClass: (id: number, data: any) => apiClient.put(`/academics/student-classes/${id}/`, data),
   deleteStudentClass: (id: number) => apiClient.delete(`/academics/student-classes/${id}/`),
-  
+
   // Class Subject Teachers (subject assignment for teachers in classes)
   classSubjectTeachers: () => apiClient.get("/academics/class-subject-teachers/"),
   createClassSubjectTeacher: (data: any) => apiClient.post("/academics/class-subject-teachers/", data),
   updateClassSubjectTeacher: (id: number, data: any) => apiClient.put(`/academics/class-subject-teachers/${id}/`, data),
   deleteClassSubjectTeacher: (id: number) => apiClient.delete(`/academics/class-subject-teachers/${id}/`),
-  
+
   classSubjects: () => apiClient.get("/academics/class-subjects/"),
   createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
   updateClassSubject: (id: number, data: any) => apiClient.put(`/academics/class-subjects/${id}/`, data),
@@ -128,6 +130,13 @@ export const academicsAPI = {
   updateDocument: (id: number, data: FormData) =>
     apiClient.put(`/academics/documents/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
   deleteDocument: (id: number) => apiClient.delete(`/academics/documents/${id}/`),
+  
+  // AI Question Generation
+  generateQuestionsFromDocument: (documentId: number, data: any) =>
+    apiClient.post(`/academics/documents/${documentId}/generate_questions/`, data),
+  generateQuestionsFromTopic: (data: any) =>
+    apiClient.post("/academics/documents/generate_questions_from_topic/", data),
+  
   notices: () => apiClient.get("/academics/notices/"),
   createNotice: (data: any) => apiClient.post("/academics/notices/", data),
   updateNotice: (id: number, data: any) => apiClient.put(`/academics/notices/${id}/`, data),
@@ -182,11 +191,7 @@ export const usersAPI = {
         school: data.school_id,
       }
 
-      console.log("[v0] Creating teacher user with data:", JSON.stringify(userData, null, 2))
-
       const userResponse = await apiClient.post("/users/auth/register/", userData)
-      console.log("[v0] Teacher user created:", userResponse.data)
-
       const userId = userResponse.data.user?.id
       if (!userId) {
         throw new Error("User creation succeeded but no user ID returned")
@@ -202,19 +207,10 @@ export const usersAPI = {
         bio: data.bio || "",
       }
 
-      console.log("[v0] Creating teacher profile with data:", JSON.stringify(profileData, null, 2))
-
       const profileResponse = await apiClient.post("/users/teachers/", profileData)
-      console.log("[v0] Teacher profile created:", profileResponse.data)
-
       return profileResponse
     } catch (error: any) {
-      console.error("[v0] Teacher creation error details:", {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message,
-      })
+      console.error("[v0] Teacher creation error:", error.response?.data || error.message)
       throw error
     }
   },
@@ -234,37 +230,23 @@ export const usersAPI = {
         school: data.school_id,
       }
 
-      console.log("[v0] Creating student user with data:", JSON.stringify(userData, null, 2))
-
       const userResponse = await apiClient.post("/users/auth/register/", userData)
-      console.log("[v0] Student user created:", userResponse.data)
-
       const userId = userResponse.data.user?.id
       if (!userId) {
         throw new Error("User creation succeeded but no user ID returned")
       }
 
       // Step 2: Create StudentProfile linked to the user
-      // Note: student_id will be auto-generated in the backend model's save() method
       const profileData = {
         user: userId,
         level: data.level || null,
         department: data.department || null,
       }
 
-      console.log("[v0] Creating student profile with data:", JSON.stringify(profileData, null, 2))
-
       const profileResponse = await apiClient.post("/users/students/", profileData)
-      console.log("[v0] Student profile created:", profileResponse.data)
-
       return profileResponse
     } catch (error: any) {
-      console.error("[v0] Student creation error details:", {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        message: error?.message,
-      })
+      console.error("[v0] Student creation error:", error.response?.data || error.message)
       throw error
     }
   },
@@ -291,4 +273,5 @@ export const assignmentAPI = {
   delete: (id: number) => apiClient.delete(`/assignments/${id}/`),
   submissions: () => apiClient.get("/assignments/submissions/"),
   gradeSubmission: (id: number, data: any) => apiClient.post(`/assignments/submissions/${id}/grade/`, data),
+  studentAssignments: () => apiClient.get("/assignments/student-assignments/"),
 }

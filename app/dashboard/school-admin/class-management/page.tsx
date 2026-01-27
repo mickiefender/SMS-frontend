@@ -11,6 +11,7 @@ import { useState, useEffect } from "react"
 import { academicsAPI } from "@/lib/api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import Loader from '@/components/loader'
 
 interface Class {
   id: number
@@ -41,7 +42,13 @@ export default function ClassManagementPage() {
     fetchClasses()
   }, [])
 
-  if (loading) return <div className="text-center py-8">Loading...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+        <Loader size="md" color="#3b82f6" />
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">

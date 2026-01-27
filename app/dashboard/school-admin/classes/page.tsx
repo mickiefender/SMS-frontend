@@ -15,6 +15,9 @@ import { ClassSubjectsManagement } from "@/components/class-subjects-management"
 import { EnrollStudentsInClass } from "@/components/enroll-students-in-class"
 import { AssignTeachersToClass } from "@/components/assign-teachers-to-class"
 import { AssignSubjectTeachers } from "@/components/assign-subject-teachers"
+import Loader from '@/components/loader'
+
+
 
 interface Class {
   id: number

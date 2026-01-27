@@ -59,6 +59,7 @@ const navSections: Record<string, NavSection[]> = {
       label: "Admin",
       icon: Settings,
       items: [
+         { label: "Admin Staff Management", href: "/dashboard/school-admin/manage-admin-staff", icon: Users },
         { label: "Students", href: "/dashboard/school-admin/students", icon: Users },
         { label: "Teachers", href: "/dashboard/school-admin/teachers", icon: User },
         
@@ -112,6 +113,11 @@ const navSections: Record<string, NavSection[]> = {
       label: "Dashboard",
       icon: ClipboardEdit,
       href: "/dashboard/teacher",
+    },
+    {
+      label: "My Profile",
+      icon: UserCircle,
+      href: "/dashboard/teacher/profile",
     },
     {
       label: "Teaching",

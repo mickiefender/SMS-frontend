@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, FileText } from "lucide-react"
+import Loader from "@/components/loader"
 
 function SubmissionsContent() {
   const [submissions, setSubmissions] = useState<any[]>([])
@@ -29,8 +30,13 @@ function SubmissionsContent() {
     (s.student_name || "").toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  if (loading) return <div className="text-center py-8">Loading submissions...</div>
-
+ if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#3b82f6" />
+    </div>
+  )
+}
   return (
     <div className="space-y-6">
       <div>

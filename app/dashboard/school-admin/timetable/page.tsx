@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2, Edit2, Search } from "lucide-react"
+import { Trash2, Edit2, Search } from "lucide-react"
 
 interface Timetable {
   id: number
   class_obj_id?: number
   subject_id?: number
   teacher_id?: number
+  class_obj?: any
+  subject?: any
+  teacher?: any
   day: string
   start_time: string
   end_time: string
@@ -22,9 +25,11 @@ interface Timetable {
 
 export default function TimetablePage() {
   const [timetables, setTimetables] = useState<Timetable[]>([])
+  const [classes, setClasses] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [teachers, setTeachers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
   const [isOpen, setIsOpen] = useState(false)
   const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null)
   const [formData, setFormData] = useState({
@@ -36,8 +41,6 @@ export default function TimetablePage() {
     end_time: "",
     venue: "",
   })
-
-  const itemsPerPage = 10
 
   const fetchTimetables = async () => {
     try {
@@ -51,17 +54,52 @@ export default function TimetablePage() {
     }
   }
 
+  const fetchDropdownData = async () => {
+    try {
+      const classesRes = await academicsAPI.classes()
+      setClasses(classesRes.data.results || classesRes.data || [])
+    } catch (err) {
+      console.error("Failed to load classes:", err)
+    }
+
+    try {
+      const subjectsRes = await academicsAPI.subjects()
+      setSubjects(subjectsRes.data.results || subjectsRes.data || [])
+    } catch (err) {
+      console.error("Failed to load subjects:", err)
+    }
+
+    try {
+      const teachersRes = await academicsAPI.teachers()
+      setTeachers(teachersRes.data.results || teachersRes.data || [])
+    } catch (err) {
+      console.error("Failed to load teachers:", err)
+    }
+  }
+
   useEffect(() => {
     fetchTimetables()
+    fetchDropdownData()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const payload = {
+      class_obj: formData.class_obj_id ? parseInt(formData.class_obj_id) : null,
+      subject: formData.subject_id ? parseInt(formData.subject_id) : null,
+      teacher: formData.teacher_id ? parseInt(formData.teacher_id) : null,
+      day: formData.day,
+      start_time: formData.start_time,
+      end_time: formData.end_time,
+      venue: formData.venue,
+    }
+
     try {
       if (editingTimetable) {
-        await academicsAPI.updateTimetable(editingTimetable.id, formData)
+        await academicsAPI.updateTimetable(editingTimetable.id, payload)
       } else {
-        await academicsAPI.createTimetable(formData)
+        await academicsAPI.createTimetable(payload)
       }
       setIsOpen(false)
       setEditingTimetable(null)
@@ -75,18 +113,22 @@ export default function TimetablePage() {
         venue: "",
       })
       fetchTimetables()
-    } catch (err) {
-      console.error("Failed to save timetable")
+    } catch (err: any) {
+      console.error("Failed to save timetable:", err)
+      if (err.response?.data) {
+        console.error("Error details:", err.response.data)
+        alert(`Error: ${JSON.stringify(err.response.data)}`)
+      }
     }
   }
 
   const handleEdit = (timetable: Timetable) => {
     setEditingTimetable(timetable)
     setFormData({
-      class_obj_id: timetable.class_obj_id?.toString() || "",
-      subject_id: timetable.subject_id?.toString() || "",
-      teacher_id: timetable.teacher_id?.toString() || "",
-      day: timetable.day,
+      class_obj_id: (timetable.class_obj_id || (typeof timetable.class_obj === 'object' ? timetable.class_obj?.id : timetable.class_obj))?.toString() || "",
+      subject_id: (timetable.subject_id || (typeof timetable.subject === 'object' ? timetable.subject?.id : timetable.subject))?.toString() || "",
+      teacher_id: (timetable.teacher_id || (typeof timetable.teacher === 'object' ? timetable.teacher?.id : timetable.teacher))?.toString() || "",
+      day: timetable.day.toLowerCase(),
       start_time: timetable.start_time,
       end_time: timetable.end_time,
       venue: timetable.venue || "",
@@ -112,9 +154,6 @@ export default function TimetablePage() {
       t.end_time.includes(searchTerm),
   )
 
-  const totalPages = Math.ceil(filteredTimetables.length / itemsPerPage)
-  const paginatedTimetables = filteredTimetables.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -129,30 +168,51 @@ export default function TimetablePage() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label>Class ID</Label>
-                <Input
-                  type="number"
+                <Label>Class</Label>
+                <select
                   value={formData.class_obj_id}
                   onChange={(e) => setFormData({ ...formData, class_obj_id: e.target.value })}
+                  className="border rounded px-3 py-2 w-full"
                   required
-                />
+                >
+                  <option value="">Select Class</option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <Label>Subject ID</Label>
-                <Input
-                  type="number"
+                <Label>Subject</Label>
+                <select
                   value={formData.subject_id}
                   onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
+                  className="border rounded px-3 py-2 w-full"
                   required
-                />
+                >
+                  <option value="">Select Subject</option>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <Label>Teacher ID</Label>
-                <Input
-                  type="number"
+                <Label>Teacher</Label>
+                <select
                   value={formData.teacher_id}
                   onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
-                />
+                  className="border rounded px-3 py-2 w-full"
+                >
+                  <option value="">Select Teacher</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.full_name || t.name || t.username}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <Label>Day</Label>
@@ -163,12 +223,12 @@ export default function TimetablePage() {
                   required
                 >
                   <option value="">Select Day</option>
-                  <option value="Monday">Monday</option>
-                  <option value="Tuesday">Tuesday</option>
-                  <option value="Wednesday">Wednesday</option>
-                  <option value="Thursday">Thursday</option>
-                  <option value="Friday">Friday</option>
-                  <option value="Saturday">Saturday</option>
+                  <option value="monday">Monday</option>
+                  <option value="tuesday">Tuesday</option>
+                  <option value="wednesday">Wednesday</option>
+                  <option value="thursday">Thursday</option>
+                  <option value="friday">Friday</option>
+                  <option value="saturday">Saturday</option>
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -213,69 +273,81 @@ export default function TimetablePage() {
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Day</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Start Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">End Time</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Venue</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedTimetables.map((timetable) => (
-              <tr key={timetable.id} className="border-b hover:bg-gray-50">
-                <td className="px-6 py-3 font-medium">{timetable.day}</td>
-                <td className="px-6 py-3">{timetable.start_time}</td>
-                <td className="px-6 py-3">{timetable.end_time}</td>
-                <td className="px-6 py-3">{timetable.venue || "N/A"}</td>
-                <td className="px-6 py-3 flex gap-2">
-                  <button onClick={() => handleEdit(timetable)} className="text-blue-600">
-                    <Edit2 size={18} />
-                  </button>
-                  <button onClick={() => handleDelete(timetable.id)} className="text-red-600">
-                    <Trash2 size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="space-y-8">
+        {classes.map((classObj) => {
+          const classTimetables = filteredTimetables
+            .filter((t) => {
+              const tClassId = t.class_obj_id || (typeof t.class_obj === 'object' ? t.class_obj?.id : t.class_obj)
+              return tClassId === classObj.id
+            })
+            .sort((a, b) => {
+              const days: { [key: string]: number } = {
+                monday: 1,
+                tuesday: 2,
+                wednesday: 3,
+                thursday: 4,
+                friday: 5,
+                saturday: 6,
+                sunday: 7,
+              }
+              const dayA = days[a.day.toLowerCase()] || 8
+              const dayB = days[b.day.toLowerCase()] || 8
+              if (dayA !== dayB) return dayA - dayB
+              return a.start_time.localeCompare(b.start_time)
+            })
 
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-gray-600">{itemsPerPage} / page</span>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft size={18} />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              variant={currentPage === page ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCurrentPage(page)}
-              className={currentPage === page ? "bg-purple-600" : ""}
-            >
-              {page}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight size={18} />
-          </Button>
-        </div>
+          if (classTimetables.length === 0) return null
+
+          return (
+            <div key={classObj.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="bg-purple-50 px-6 py-4 border-b border-purple-100">
+                <h2 className="text-xl font-bold text-purple-800">{classObj.name}</h2>
+              </div>
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Day</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Subject</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Teacher</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Venue</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classTimetables.map((timetable) => {
+                    const subjectId = timetable.subject_id || (typeof timetable.subject === 'object' ? timetable.subject?.id : timetable.subject)
+                    const teacherId = timetable.teacher_id || (typeof timetable.teacher === 'object' ? timetable.teacher?.id : timetable.teacher)
+
+                    const subject = subjects.find((s) => s.id === subjectId)
+                    const teacher = teachers.find((t) => t.id === teacherId)
+
+                    return (
+                      <tr key={timetable.id} className="border-b hover:bg-gray-50">
+                        <td className="px-6 py-3 font-medium capitalize">{timetable.day}</td>
+                        <td className="px-6 py-3">{subject?.name || "Unknown"}</td>
+                        <td className="px-6 py-3">{teacher?.full_name || teacher?.username || "Unknown"}</td>
+                        <td className="px-6 py-3">
+                          {timetable.start_time.slice(0, 5)} - {timetable.end_time.slice(0, 5)}
+                        </td>
+                        <td className="px-6 py-3">{timetable.venue || "N/A"}</td>
+                        <td className="px-6 py-3 flex gap-2">
+                          <button onClick={() => handleEdit(timetable)} className="text-blue-600">
+                            <Edit2 size={18} />
+                          </button>
+                          <button onClick={() => handleDelete(timetable.id)} className="text-red-600">
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })}
+        {filteredTimetables.length === 0 && <div className="text-center py-8 text-gray-500">No timetables found.</div>}
       </div>
     </div>
   )

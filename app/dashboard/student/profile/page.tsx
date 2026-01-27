@@ -19,6 +19,7 @@ interface StudentProfile {
   department?: string
   level?: string
   picture?: string
+  
 }
 
 export default function StudentProfilePage() {
@@ -65,13 +66,17 @@ export default function StudentProfilePage() {
           <CardHeader>
             <CardTitle>Profile Picture</CardTitle>
           </CardHeader>
-          <CardContent className="flex justify-center">
+          <CardContent className="flex flex-col items-center justify-center gap-4">
             <ProfilePictureUpload
               userId={profile?.id || 0}
               userName={`${profile?.first_name} ${profile?.last_name}`}
               currentPicture={profile?.picture}
               onUploadSuccess={() => setRefreshTrigger((prev) => prev + 1)}
             />
+            <div className="text-center">
+              <p className="font-semibold text-lg">{profile?.first_name} {profile?.last_name}</p>
+              <p className="text-sm text-gray-500">ID: {profile?.student_id || profile?.username}</p>
+            </div>
           </CardContent>
         </Card>
 
@@ -104,7 +109,7 @@ export default function StudentProfilePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Student ID</p>
-                <p className="font-semibold">{profile?.student_id || "Not available"}</p>
+                <p className="font-semibold">{profile?.student_id || profile?.username || "Not available"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Level</p>

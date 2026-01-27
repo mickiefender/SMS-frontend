@@ -2,12 +2,13 @@
 
 import { useAuthContext } from "@/lib/auth-context"
 import { redirect } from "next/navigation"
+import LoadingWrapper from "@/components/loading-wrapper"
 
 export default function DashboardPage() {
   const { user, loading } = useAuthContext()
 
   if (loading) {
-    return <div>Loading...</div>
+    return <LoadingWrapper isLoading={true} />
   }
 
   if (!user) {

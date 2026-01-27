@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import ProfilePictureUpload from "@/components/profile-picture-upload"
 import { Button } from "@/components/ui/button"
 import { Edit2, Save } from "lucide-react"
+import Loader from '@/components/loader'
 
 interface TeacherProfile {
   id: number
@@ -45,8 +46,12 @@ export default function TeacherProfilePage() {
   }, [refreshTrigger])
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
-  }
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#f5c607" />
+    </div>
+  )
+}
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

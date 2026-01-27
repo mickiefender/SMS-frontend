@@ -5,6 +5,7 @@ import { useAuthContext } from "@/lib/auth-context"
 import { attendanceAPI } from "@/lib/api"
 import Link from "next/link"
 import { Calendar, ChevronRight } from "lucide-react"
+import Loader from "@/components/loader"
 
 function AttendanceContent() {
   const { user } = useAuthContext()
@@ -38,7 +39,13 @@ function AttendanceContent() {
     fetchAttendanceRecords()
   }, [])
 
-  if (loading) return <div className="text-center py-8">Loading attendance records...</div>
+ if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#f5c607" />
+    </div>
+  )
+}
   if (error) return <div className="text-red-600 text-center py-8">{error}</div>
 
   return (

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Search, Plus } from "lucide-react"
+import Loader from "@/components/loader"
 
 function GradesContent() {
   const [grades, setGrades] = useState<any[]>([])
@@ -64,8 +65,13 @@ function GradesContent() {
 
   const filteredGrades = grades.filter((g) => (g.student_name || "").toLowerCase().includes(searchTerm.toLowerCase()))
 
-  if (loading) return <div className="text-center py-8">Loading grades...</div>
-
+ if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#f5c607" />
+    </div>
+  )
+}
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

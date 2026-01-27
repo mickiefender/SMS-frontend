@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Send, Search } from "lucide-react"
+import Loader from "@/components/loader"
 
 function MessagesContent() {
   const [conversations, setConversations] = useState<any[]>([])
@@ -47,7 +48,14 @@ function MessagesContent() {
     }
   }
 
-  if (loading) return <div className="text-center py-8">Loading messages...</div>
+
+if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#f5c607" />
+    </div>
+  )
+}
 
   return (
     <div className="space-y-6 h-[600px]">
@@ -108,6 +116,8 @@ function MessagesContent() {
     </div>
   )
 }
+
+
 
 export default function MessagesPage() {
   return <MessagesContent />

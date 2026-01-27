@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { ChevronLeft, ChevronRight, Trash2, Edit2, Search } from "lucide-react"
+import Loader from '@/components/loader'
 
 interface Grade {
   id: number
@@ -51,7 +52,13 @@ export default function GradingPage() {
       setLoading(false)
     }
   }
-
+ if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+        <Loader size="md" color="#3b82f6" />
+      </div>
+    )
+  }
   useEffect(() => {
     fetchGrades()
   }, [])

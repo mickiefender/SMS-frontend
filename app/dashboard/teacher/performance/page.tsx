@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { usersAPI } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { Search, TrendingUp } from "lucide-react"
+import Loader from "@/components/loader"
 
 function PerformanceContent() {
   const [students, setStudents] = useState<any[]>([])
@@ -27,9 +28,14 @@ function PerformanceContent() {
 
   const filteredStudents = students.filter((s) => (s.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()))
 
-  if (loading) return <div className="text-center py-8">Loading student performance...</div>
-
+  if (loading) {
   return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="md" color="#f5c607" />
+    </div>
+  )
+}
+ return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-red-600 mb-2">Student Performance</h1>
