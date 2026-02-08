@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import { academicsAPI, attendanceAPI } from "@/lib/api"
+import { academicsAPI, attendanceAPI, usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
 
 export function AttendanceTracker() {
@@ -14,6 +14,7 @@ export function AttendanceTracker() {
   const [classes, setClasses] = useState<any[]>([])
   const [subjects, setSubjects] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
+  const [studentNames, setStudentNames] = useState<Record<number, string>>({})
   const [attendance, setAttendance] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -25,7 +26,7 @@ export function AttendanceTracker() {
         const res = await academicsAPI.classes()
         setClasses(res.data.results || res.data || [])
       } catch (error) {
-        console.error("[v0] Failed to fetch classes:", error)
+        console.error("Failed to fetch classes:", error)
       } finally {
         setLoading(false)
       }
@@ -35,22 +36,18 @@ export function AttendanceTracker() {
 
   useEffect(() => {
     const fetchClassSubjects = async () => {
-      if (!selectedClass) return
+      if (!selectedClass) {
+        setSubjects([])
+        return
+      }
       try {
-        const res = await academicsAPI.classSubjects()
-        const classSubjects = (res.data.results || res.data || []).filter(
-          (cs: any) =>
-            cs.class_obj_id === Number.parseInt(selectedClass) || cs.class_obj === Number.parseInt(selectedClass),
-        )
-        const subjectIds = classSubjects.map((cs: any) => cs.subject_id || cs.subject)
+        const res = await academicsAPI.classSubjects({ class_obj: selectedClass })
+        const subjectIds = (res.data.results || res.data).map((cs: any) => cs.subject)
 
-        const subjectsRes = await academicsAPI.subjects()
-        const filteredSubjects = (subjectsRes.data.results || subjectsRes.data || []).filter((s: any) =>
-          subjectIds.includes(s.id),
-        )
-        setSubjects(filteredSubjects)
+        const subjectsRes = await academicsAPI.subjects({ id__in: subjectIds.join(",") })
+        setSubjects(subjectsRes.data.results || subjectsRes.data)
       } catch (error) {
-        console.error("[v0] Failed to fetch subjects:", error)
+        console.error("Failed to fetch subjects:", error)
       }
     }
     fetchClassSubjects()
@@ -58,23 +55,36 @@ export function AttendanceTracker() {
 
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!selectedClass) return
+      if (!selectedClass) {
+        setStudents([])
+        return
+      }
       try {
-        const res = await academicsAPI.enrollments()
-        const classEnrollments = (res.data.results || res.data || []).filter(
-          (e: any) =>
-            e.class_obj_id === Number.parseInt(selectedClass) || e.class_obj === Number.parseInt(selectedClass),
-        )
-        setStudents(classEnrollments)
+        const res = await academicsAPI.enrollments({ class_obj: selectedClass })
+        const enrollments = res.data.results || res.data
+        setStudents(enrollments)
 
         // Initialize attendance state
         const newAttendance: Record<number, string> = {}
-        classEnrollments.forEach((enrollment: any) => {
-          newAttendance[enrollment.student_id || enrollment.student] = "present"
+        enrollments.forEach((enrollment: any) => {
+          newAttendance[enrollment.student] = "present"
         })
         setAttendance(newAttendance)
+
+        // Fetch student names
+        const newStudentNames: Record<number, string> = {}
+        for (const enrollment of enrollments) {
+          try {
+            const userRes = await usersAPI.getById(enrollment.student)
+            newStudentNames[enrollment.student] = `${userRes.data.first_name} ${userRes.data.last_name}`
+          } catch (error) {
+            console.error(`Failed to fetch student name for ID ${enrollment.student}:`, error)
+            newStudentNames[enrollment.student] = `Student ${enrollment.student}`
+          }
+        }
+        setStudentNames(newStudentNames)
       } catch (error) {
-        console.error("[v0] Failed to fetch students:", error)
+        console.error("Failed to fetch students:", error)
       }
     }
     fetchStudents()
@@ -91,8 +101,8 @@ export function AttendanceTracker() {
       const attendances = students.map((student: any) => ({
         class_obj: Number.parseInt(selectedClass),
         subject: Number.parseInt(selectedSubject),
-        student: student.student_id || student.student,
-        status: attendance[student.student_id || student.student] || "present",
+        student: student.student,
+        status: attendance[student.student] || "present",
         date: selectedDate,
         teacher: user?.id,
       }))
@@ -103,7 +113,7 @@ export function AttendanceTracker() {
       setSelectedClass("")
       setSelectedSubject("")
     } catch (error: any) {
-      console.error("[v0] Failed to submit attendance:", error)
+      console.error("Failed to submit attendance:", error)
       alert(error?.response?.data?.detail || "Failed to mark attendance")
     } finally {
       setSubmitting(false)
@@ -168,13 +178,13 @@ export function AttendanceTracker() {
             <div className="space-y-2">
               {students.map((student: any) => (
                 <div key={student.id} className="flex items-center justify-between p-3 border rounded">
-                  <span>{student.student_name || `Student ${student.id}`}</span>
+                  <span>{studentNames[student.student] || `Student ${student.student}`}</span>
                   <select
-                    value={attendance[student.student_id || student.student] || "present"}
+                    value={attendance[student.student] || "present"}
                     onChange={(e) =>
                       setAttendance({
                         ...attendance,
-                        [student.student_id || student.student]: e.target.value,
+                        [student.student]: e.target.value,
                       })
                     }
                     className="px-2 py-1 border border-input rounded text-sm"

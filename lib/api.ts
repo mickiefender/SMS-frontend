@@ -34,8 +34,7 @@ apiClient.interceptors.response.use(
 )
 
 export const authAPI = {
-  login: (credentials: { email?: string; student_id?: string; password: string }) =>
-    apiClient.post("/users/auth/login/", credentials),
+  login: (credentials: { email?: string; student_id?: string; password: string }) => apiClient.post("/users/auth/login/", credentials),
   register: (data: any) => apiClient.post("/users/auth/register/", data),
   logout: () => {
     sessionStorage.removeItem("authToken")
@@ -45,8 +44,8 @@ export const authAPI = {
 }
 
 export const schoolsAPI = {
-  getById: (id: number) => apiClient.get(`/schools/schools/${id}/`),
   list: () => apiClient.get("/schools/schools/"),
+  getById: (id: number) => apiClient.get(`/schools/schools/${id}/`),
   create: (data: any) => apiClient.post("/schools/schools/", data),
   update: (id: number, data: any) => apiClient.put(`/schools/schools/${id}/`, data),
   suspend: (id: number) => apiClient.post(`/schools/schools/${id}/suspend/`),
@@ -54,35 +53,41 @@ export const schoolsAPI = {
 }
 
 export const academicsAPI = {
+  // Generic methods for flexible API calls
+  get: (endpoint: string, params?: any) => apiClient.get(`/academics${endpoint}`, { params }),
+  post: (endpoint: string, data: any, config?: any) => apiClient.post(`/academics${endpoint}`, data, config),
+  put: (endpoint: string, data: any, config?: any) => apiClient.put(`/academics${endpoint}`, data, config),
+  delete: (endpoint: string) => apiClient.delete(`/academics${endpoint}`),
+
+  teachers: () => apiClient.get("/users/teachers/"),
   faculties: () => apiClient.get("/academics/faculties/"),
   departments: () => apiClient.get("/academics/departments/"),
   classes: () => apiClient.get("/academics/classes/"),
   subjects: () => apiClient.get("/academics/subjects/"),
-  teachers: () => apiClient.get("/users/teachers/"),
   enrollments: () => apiClient.get("/academics/enrollments/"),
   timetables: () => apiClient.get("/academics/timetables/"),
   createTimetable: (data: any) => apiClient.post("/academics/timetables/", data),
   updateTimetable: (id: number, data: any) => apiClient.put(`/academics/timetables/${id}/`, data),
   deleteTimetable: (id: number) => apiClient.delete(`/academics/timetables/${id}/`),
-
+  
   // Class Teachers (assignment of teachers to classes)
   classTeachers: () => apiClient.get("/academics/class-teachers/"),
   createClassTeacher: (data: any) => apiClient.post("/academics/class-teachers/", data),
   updateClassTeacher: (id: number, data: any) => apiClient.put(`/academics/class-teachers/${id}/`, data),
   deleteClassTeacher: (id: number) => apiClient.delete(`/academics/class-teachers/${id}/`),
-
+  
   // Student Classes (student enrollment in classes)
   studentClasses: () => apiClient.get("/academics/student-classes/"),
   createStudentClass: (data: any) => apiClient.post("/academics/student-classes/", data),
   updateStudentClass: (id: number, data: any) => apiClient.put(`/academics/student-classes/${id}/`, data),
   deleteStudentClass: (id: number) => apiClient.delete(`/academics/student-classes/${id}/`),
-
+  
   // Class Subject Teachers (subject assignment for teachers in classes)
   classSubjectTeachers: () => apiClient.get("/academics/class-subject-teachers/"),
   createClassSubjectTeacher: (data: any) => apiClient.post("/academics/class-subject-teachers/", data),
   updateClassSubjectTeacher: (id: number, data: any) => apiClient.put(`/academics/class-subject-teachers/${id}/`, data),
   deleteClassSubjectTeacher: (id: number) => apiClient.delete(`/academics/class-subject-teachers/${id}/`),
-
+  
   classSubjects: () => apiClient.get("/academics/class-subjects/"),
   createClassSubject: (data: any) => apiClient.post("/academics/class-subjects/", data),
   updateClassSubject: (id: number, data: any) => apiClient.put(`/academics/class-subjects/${id}/`, data),
@@ -124,19 +129,16 @@ export const academicsAPI = {
   createEvent: (data: any) => apiClient.post("/academics/events/", data),
   updateEvent: (id: number, data: any) => apiClient.put(`/academics/events/${id}/`, data),
   deleteEvent: (id: number) => apiClient.delete(`/academics/events/${id}/`),
-  documents: () => apiClient.get("/academics/documents/"),
+  documents: (params?: any) => apiClient.get("/academics/documents/", { params }),
   createDocument: (data: FormData) =>
     apiClient.post("/academics/documents/", data, { headers: { "Content-Type": "multipart/form-data" } }),
   updateDocument: (id: number, data: FormData) =>
     apiClient.put(`/academics/documents/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
   deleteDocument: (id: number) => apiClient.delete(`/academics/documents/${id}/`),
-  
-  // AI Question Generation
-  generateQuestionsFromDocument: (documentId: number, data: any) =>
-    apiClient.post(`/academics/documents/${documentId}/generate_questions/`, data),
-  generateQuestionsFromTopic: (data: any) =>
-    apiClient.post("/academics/documents/generate_questions_from_topic/", data),
-  
+  generateQuestionsFromDocument: (docId: number, settings: any) =>
+    apiClient.post(`/academics/documents/${docId}/generate_questions/`, settings),
+  generateQuestionsFromTopic: (payload: any) =>
+    apiClient.post("/academics/documents/generate_questions_from_topic/", payload),
   notices: () => apiClient.get("/academics/notices/"),
   createNotice: (data: any) => apiClient.post("/academics/notices/", data),
   updateNotice: (id: number, data: any) => apiClient.put(`/academics/notices/${id}/`, data),
@@ -172,8 +174,11 @@ export const gradesAPI = {
 
 export const usersAPI = {
   list: () => apiClient.get("/users/users/"),
+  getById: (id: number) => apiClient.get(`/users/users/${id}/`),
   teachers: () => apiClient.get("/users/teachers/"),
+  getTeacherById: (id: number) => apiClient.get(`/users/teachers/${id}/`),
   students: () => apiClient.get("/users/students/"),
+  getStudentById: (id: number) => apiClient.get(`/users/students/${id}/`),
   create: (data: any) => apiClient.post("/users/users/", data),
 
   createTeacher: async (data: any) => {
@@ -191,7 +196,11 @@ export const usersAPI = {
         school: data.school_id,
       }
 
+      console.log("[v0] Creating teacher user with data:", JSON.stringify(userData, null, 2))
+
       const userResponse = await apiClient.post("/users/auth/register/", userData)
+      console.log("[v0] Teacher user created:", userResponse.data)
+
       const userId = userResponse.data.user?.id
       if (!userId) {
         throw new Error("User creation succeeded but no user ID returned")
@@ -207,10 +216,19 @@ export const usersAPI = {
         bio: data.bio || "",
       }
 
+      console.log("[v0] Creating teacher profile with data:", JSON.stringify(profileData, null, 2))
+
       const profileResponse = await apiClient.post("/users/teachers/", profileData)
+      console.log("[v0] Teacher profile created:", profileResponse.data)
+
       return profileResponse
     } catch (error: any) {
-      console.error("[v0] Teacher creation error:", error.response?.data || error.message)
+      console.error("[v0] Teacher creation error details:", {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      })
       throw error
     }
   },
@@ -230,23 +248,37 @@ export const usersAPI = {
         school: data.school_id,
       }
 
+      console.log("[v0] Creating student user with data:", JSON.stringify(userData, null, 2))
+
       const userResponse = await apiClient.post("/users/auth/register/", userData)
+      console.log("[v0] Student user created:", userResponse.data)
+
       const userId = userResponse.data.user?.id
       if (!userId) {
         throw new Error("User creation succeeded but no user ID returned")
       }
 
       // Step 2: Create StudentProfile linked to the user
+      // Note: student_id will be auto-generated in the backend model's save() method
       const profileData = {
         user: userId,
         level: data.level || null,
         department: data.department || null,
       }
 
+      console.log("[v0] Creating student profile with data:", JSON.stringify(profileData, null, 2))
+
       const profileResponse = await apiClient.post("/users/students/", profileData)
+      console.log("[v0] Student profile created:", profileResponse.data)
+
       return profileResponse
     } catch (error: any) {
-      console.error("[v0] Student creation error:", error.response?.data || error.message)
+      console.error("[v0] Student creation error details:", {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      })
       throw error
     }
   },
@@ -273,5 +305,68 @@ export const assignmentAPI = {
   delete: (id: number) => apiClient.delete(`/assignments/${id}/`),
   submissions: () => apiClient.get("/assignments/submissions/"),
   gradeSubmission: (id: number, data: any) => apiClient.post(`/assignments/submissions/${id}/grade/`, data),
-  studentAssignments: () => apiClient.get("/assignments/student-assignments/"),
+}
+
+
+export const billingAPI = {
+  // Fee Types Management
+  feeTypes: () => apiClient.get("/billing/fee-types/"),
+  createFeeType: (data: any) => apiClient.post("/billing/fee-types/", data),
+  updateFeeType: (id: number, data: any) => apiClient.put(`/billing/fee-types/${id}/`, data),
+  assignFeeToStudent: (data: any) => apiClient.post("/billing/student-fees/", data),
+  assignFeeToClass: (data: any) => apiClient.post("/billing/class-fees/", data),
+  individualFees: () => apiClient.get("/billing/student-fees/"),
+  deleteFeeType: (id: number) => apiClient.delete(`/billing/fee-types/${id}/`),
+  
+  // Student Fees
+  studentFees: () => apiClient.get("/billing/student-fees/"),
+  createStudentFee: (data: any) => apiClient.post("/billing/student-fees/", data),
+  updateStudentFee: (id: number, data: any) => apiClient.put(`/billing/student-fees/${id}/`, data),
+  deleteStudentFee: (id: number) => apiClient.delete(`/billing/student-fees/${id}/`),
+  
+  // Class Fees
+  classFees: () => apiClient.get("/billing/class-fees/"),
+  createClassFee: (data: any) => apiClient.post("/billing/class-fees/", data),
+  updateClassFee: (id: number, data: any) => apiClient.put(`/billing/class-fees/${id}/`, data),
+  deleteClassFee: (id: number) => apiClient.delete(`/billing/class-fees/${id}/`),
+  
+  // Invoices
+  invoices: () => apiClient.get("/billing/invoices/"),
+  createInvoice: (data: any) => apiClient.post("/billing/invoices/", data),
+  updateInvoice: (id: number, data: any) => apiClient.put(`/billing/invoices/${id}/`, data),
+  deleteInvoice: (id: number) => apiClient.delete(`/billing/invoices/${id}/`),
+  
+  // Payments
+  payments: () => apiClient.get("/billing/payments/"),
+  createPayment: (data: any) => apiClient.post("/billing/payments/", data),
+  updatePayment: (id: number, data: any) => apiClient.put(`/billing/payments/${id}/`, data),
+  deletePayment: (id: number) => apiClient.delete(`/billing/payments/${id}/`),
+}
+
+
+
+export const messagingAPI = {
+  // Messages
+  messages: () => apiClient.get("/messaging/messages/"),
+  sentMessages: () => apiClient.get("/messaging/messages/sent/"),
+  createMessage: (data: any) => apiClient.post("/messaging/messages/", data),
+  markMessageAsRead: (id: number) => apiClient.post(`/messaging/messages/${id}/mark_as_read/`),
+  
+  // Announcements
+  announcements: () => apiClient.get("/messaging/announcements/"),
+  getAnnouncement: (id: number) => apiClient.get(`/messaging/announcements/${id}/`),
+  createAnnouncement: (data: any) => apiClient.post("/messaging/announcements/", data),
+  updateAnnouncement: (id: number, data: any) => apiClient.put(`/messaging/announcements/${id}/`, data),
+  deleteAnnouncement: (id: number) => apiClient.delete(`/messaging/announcements/${id}/`),
+  publishAnnouncement: (id: number) => apiClient.post(`/messaging/announcements/${id}/publish/`),
+  markAnnouncementAsRead: (id: number) => apiClient.post(`/messaging/announcements/${id}/mark_as_read/`),
+  getAnnouncementReadBy: (id: number) => apiClient.get(`/messaging/announcements/${id}/read_by/`),
+  
+  // Notices
+  notices: () => apiClient.get("/messaging/notices/"),
+  getNotice: (id: number) => apiClient.get(`/messaging/notices/${id}/`),
+  createNotice: (data: any) => apiClient.post("/messaging/notices/", data),
+  updateNotice: (id: number, data: any) => apiClient.put(`/messaging/notices/${id}/`, data),
+  deleteNotice: (id: number) => apiClient.delete(`/messaging/notices/${id}/`),
+  pinNotice: (id: number) => apiClient.post(`/messaging/notices/${id}/pin/`),
 }

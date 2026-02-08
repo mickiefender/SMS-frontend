@@ -33,6 +33,9 @@ import {
   FilePen,
   UploadCloud,
   MessageCircle,
+  DollarSignIcon,
+  CreditCard,
+  Bell,
 } from "lucide-react"
 
 type NavItem = {
@@ -66,6 +69,15 @@ const navSections: Record<string, NavSection[]> = {
       ],
     },
     {
+    label: "Finance",
+      icon: CreditCard,
+      items: [
+        { label: "Billing", href: "/dashboard/school-admin/billing", icon: CreditCard },
+        { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard }, { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
+        { label: "Expenses", href: "/dashboard/school-admin/expenses", icon: FileText },
+      ],
+      },
+    {
       label: "Academics",
       icon: BookOpen,
       items: [
@@ -90,22 +102,31 @@ const navSections: Record<string, NavSection[]> = {
     },
     {
       label: "Communication",
-      icon: Megaphone,
+      icon: MessageCircle,
       items: [
-        { label: "Notice", href: "/dashboard/school-admin#notice", icon: Megaphone },
-        { label: "Message", href: "/dashboard/school-admin#message", icon: MessageSquare },
+        { label: "Announcement", href: "/dashboard/school-admin/announcement", icon: Megaphone },
+        { label: "Message", href: "/dashboard/school-admin/messaging", icon: MessageSquare },
+        { label: "News", href: "/dashboard/school-admin/news", icon: BookOpen },
       ],
     },
     {
-      label: "Library",
+   label: "Library",
       icon: Library,
-      href: "/dashboard/school-admin#library",
+      items: [
+        { label: "Books", href: "/dashboard/school-admin/library/books", icon: Book },
+        { label: "Issued Books", href: "/dashboard/school-admin/library/issued-books", icon: BookUser },
+        { label: "Categories", href: "/dashboard/school-admin/library/categories", icon: BookOpen },
+      ],
     },
     {
-      label: "Account",
+      label: "Profile Pictures",
       icon: UserCircle,
-      href: "/dashboard/school-admin#account",
-    },
+      items: [
+        { label: "Teachers", href: "/dashboard/school-admin/profile-pictures/teachers", icon: User },
+        { label: "Students", href: "/dashboard/school-admin/profile-pictures/students", icon: Users },
+      ],
+
+    }
   ],
   
   teacher: [
@@ -132,6 +153,7 @@ const navSections: Record<string, NavSection[]> = {
         { label: "Performance", href: "/dashboard/teacher/performance", icon: BarChart},
         { label: "Materials", href: "/dashboard/teacher/materials", icon: UploadCloud },
         { label: "Messages", href: "/dashboard/teacher/messages", icon: MessageCircle },
+        { label: "Notifications", href: "/dashboard/teacher/notifications", icon: Bell },
       ],
     },
   ],
@@ -140,26 +162,19 @@ const navSections: Record<string, NavSection[]> = {
       label: "Dashboard",
       icon: LayoutDashboard,
       href: "/dashboard/student",
-    },
-    {
-      label: "My Info",
-      icon: UserCircle,
       items: [
-        { label: "Profile", href: "/dashboard/student/profile", icon: User },
+        { label: "Overview", href: "/dashboard/student", icon: LayoutDashboard },
+         { label: "Profile", href: "/dashboard/student/profile", icon: User },
         { label: "Enrollment", href: "/dashboard/student/enrollment", icon: FilePen },
         { label: "Timetable", href: "/dashboard/student/timetable", icon: Calendar },
-      ],
-    },
-    {
-      label: "Academics",
-      icon: BookOpen,
-      items: [
+        {label: "Notifications", href: "/dashboard/student/notifications", icon: Bell},
+        { label: "My Classes", href: "/dashboard/student/my-classes", icon: School },
         { label: "Attendance", href: "/dashboard/student/attendance", icon: CheckSquare },
-        { label: "Grades", href: "/dashboard/student#grades", icon: BarChart },
+        { label: "Grades", href: "/dashboard/student/results", icon: BarChart }, 
         { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
-        { label: "Results", href: "/dashboard/student/results", icon: FileText },
       ],
     },
+    
   ],
 }
 

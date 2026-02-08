@@ -5,7 +5,7 @@ import { useAuthContext } from "@/lib/auth-context"
 import { academicsAPI } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, Calendar } from "lucide-react"
+import { Users, BookOpen, FileText, Clock, Calendar } from "lucide-react"
 import Loader from '@/components/loader'
 
 function MyClassesContent() {

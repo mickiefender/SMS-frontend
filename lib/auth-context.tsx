@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { authAPI, schoolsAPI } from "./api"
 
 interface User {
+  teacher_id: any
   id: number
   username: string
   email: string
@@ -42,8 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchSchool = async (schoolId: number) => {
     try {
-      const response = await schoolsAPI.getById(schoolId)
-      setSchool(response.data)
+      // Use list and filter since get is not available on schoolsAPI
+      const response = await schoolsAPI.list()
+      const schools = response.data.results || response.data
+      const schoolData = Array.isArray(schools) ? schools.find((s: any) => s.id === schoolId) : null
+      setSchool(schoolData)
     } catch (error) {
       console.error("Failed to fetch school data", error)
       // Handle error appropriately

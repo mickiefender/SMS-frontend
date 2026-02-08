@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense } from "react"
 import { useAuthContext } from "@/lib/auth-context"
 import { attendanceAPI } from "@/lib/api"
 import Link from "next/link"
-import { Calendar, ChevronRight } from "lucide-react"
+import { Calendar, ChevronRight, Plus } from "lucide-react"
 import Loader from "@/components/loader"
+import { Button } from "@/components/ui/button"
 
 function AttendanceContent() {
   const { user } = useAuthContext()
@@ -39,20 +40,27 @@ function AttendanceContent() {
     fetchAttendanceRecords()
   }, [])
 
- if (loading) {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Loader size="md" color="#f5c607" />
-    </div>
-  )
-}
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader size="md" color="#f5c607" />
+      </div>
+    )
+  }
   if (error) return <div className="text-red-600 text-center py-8">{error}</div>
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-red-600 mb-2">Attendance Records</h1>
-        <p className="text-gray-600">Click on any date to view detailed attendance</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-red-600 mb-2">Attendance Records</h1>
+          <p className="text-gray-600">Click on any date to view detailed attendance</p>
+        </div>
+        <Link href="/dashboard/teacher/attendance/mark">
+          <Button className="bg-red-600 hover:bg-red-700 text-white">
+            <Plus className="mr-2" /> Mark Attendance
+          </Button>
+        </Link>
       </div>
 
       {attendanceRecords.length === 0 ? (

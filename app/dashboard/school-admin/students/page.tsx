@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { usersAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -77,7 +78,7 @@ function StudentsPageContent() {
       if (editingStudent) {
         await usersAPI.updateStudent(editingStudent.id, formData)
       } else {
-        const schoolId = user?.school_id || user?.school
+        const schoolId = user?.school_id
         if (!schoolId) {
           setError("No school associated with your account")
           return
@@ -305,10 +306,12 @@ function StudentsPageContent() {
                     <input type="checkbox" />
                   </td>
                   <td className="px-6 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500" />
-                      <span className="font-medium text-gray-900">{getStudentName(student)}</span>
-                    </div>
+                    <Link href={`/dashboard/school-admin/students/${student.id}`}>
+                      <div className="flex items-center gap-3 cursor-pointer hover:text-purple-600">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500" />
+                        <span className="font-medium text-gray-900">{getStudentName(student)}</span>
+                      </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-3 text-gray-700">#{student.student_id || "N/A"}</td>
                   <td className="px-6 py-3 text-gray-700">{student.address || "N/A"}</td>

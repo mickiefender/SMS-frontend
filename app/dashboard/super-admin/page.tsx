@@ -7,8 +7,6 @@ import { useState, useEffect } from "react"
 import { schoolsAPI } from "@/lib/api"
 import { LoadingWrapper } from "@/components/loading-wrapper"
 
-import { LoadingWrapper } from "@/components/loading-wrapper"
-
 export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState("schools")
   const [stats, setStats] = useState({ totalSchools: 0, activeSubscriptions: 0, monthlyRevenue: 0 })

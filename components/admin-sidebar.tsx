@@ -42,6 +42,7 @@ export function AdminSidebar({ open, onToggle, activeTab, setActiveTab }: AdminS
     { id: "academics", label: "Academics", icon: BookOpen, submenu: [] },
     { id: "timetable", label: "Timetable", icon: Calendar },
     { id: "grading", label: "Grading", icon: Award },
+    { id: "billing", label: "Billing", icon: Award },
     { id: "settings", label: "Settings", icon: Settings },
   ]
 

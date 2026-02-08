@@ -9,8 +9,39 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
+interface Assignment {
+  title?: string
+  description?: string
+  due_date?: string
+  teacher_name?: string
+  teacher?: {
+    full_name?: string
+    username?: string
+  }
+}
+
+interface Submission {
+  status?: string
+  score?: number
+  feedback?: string
+}
+
+interface AssignmentData {
+  assignment?: Assignment
+  submission?: Submission
+  // Properties if the item is the assignment itself (flattened structure)
+  title?: string
+  description?: string
+  due_date?: string
+  teacher_name?: string
+  teacher?: {
+    full_name?: string
+    username?: string
+  }
+}
+
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState<any[]>([])
+  const [assignments, setAssignments] = useState<AssignmentData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -19,6 +50,13 @@ export default function AssignmentsPage() {
       try {
         setLoading(true)
         setError("")
+
+        // Check if the method exists to help debugging
+        if (typeof assignmentAPI.studentAssignments !== "function") {
+          console.error("Available assignmentAPI methods:", Object.keys(assignmentAPI))
+          throw new Error(`assignmentAPI.studentAssignments is not a function. Check console for available methods.`)
+        }
+
         const res = await assignmentAPI.studentAssignments()
         setAssignments(Array.isArray(res.data) ? res.data : [])
       } catch (err: any) {
@@ -98,7 +136,7 @@ export default function AssignmentsPage() {
                         </p>
                       </div>
                     )}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid-colors-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Due Date</p>
                         <p className="font-semibold">{assignment?.due_date || "No due date"}</p>

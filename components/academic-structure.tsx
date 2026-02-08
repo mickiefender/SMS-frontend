@@ -222,13 +222,30 @@ export function AcademicStructure() {
   const handleAssignTeacher = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const assignmentData = {
-        class_obj: Number.parseInt(assignForm.class_obj),
-        subject: Number.parseInt(assignForm.subject),
-        teacher: Number.parseInt(assignForm.teacher), // This is now the User ID
+      const classId = Number.parseInt(assignForm.class_obj)
+      const subjectId = Number.parseInt(assignForm.subject)
+      const teacherId = Number.parseInt(assignForm.teacher)
+
+      const existingAssignment = classSubjects.find(
+        (cs) => cs.class_obj === classId && cs.subject === subjectId
+      )
+
+      if (existingAssignment) {
+        console.log("[v0] Updating class subject with data:", { teacher: teacherId })
+        await academicsAPI.updateClassSubject(existingAssignment.id, {
+          class_obj: classId,
+          subject: subjectId,
+          teacher: teacherId,
+        })
+      } else {
+        const assignmentData = {
+          class_obj: classId,
+          subject: subjectId,
+          teacher: teacherId,
+        }
+        console.log("[v0] Creating class subject with data:", assignmentData)
+        await academicsAPI.createClassSubject(assignmentData)
       }
-      console.log("[v0] Creating class subject with data:", assignmentData)
-      await academicsAPI.createClassSubject(assignmentData)
       setShowAssignDialog(false)
       setAssignForm({ class_obj: "", subject: "", teacher: "" })
       fetchData()

@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, BookOpen, FileText, Clock } from "lucide-react"
+import { Users, BookOpen, FileText, Clock, Hash } from "lucide-react"
 import { academicsAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
 
 interface ClassTeacher {
   id: number
   class_name: string
+  class_code?: string
   teacher_name: string
   is_form_tutor: boolean
+  student_count?: number
 }
 
 interface StudentInClass {
@@ -47,11 +49,29 @@ export function TeacherClassesDashboard() {
       const teacherClasses = Array.isArray(allClasses)
         ? allClasses.filter((ct: any) => ct.teacher === user?.id)
         : []
-      setManagedClasses(teacherClasses)
 
-      if (teacherClasses.length > 0) {
-        setSelectedClass(teacherClasses[0])
-        await loadClassDetails(teacherClasses[0])
+      // Calculate student counts and normalize data
+      let classesWithDetails = teacherClasses
+      try {
+        const studentsRes = await academicsAPI.studentClasses()
+        const allStudents = studentsRes.data.results || studentsRes.data
+        
+        if (Array.isArray(allStudents)) {
+          classesWithDetails = teacherClasses.map((tc: any) => ({
+            ...tc,
+            student_count: allStudents.filter((s: any) => s.class_obj === tc.id).length,
+            class_code: tc.class_code || tc.code // Try 'code' if 'class_code' is missing
+          }))
+        }
+      } catch (err) {
+        console.error("Failed to calculate student counts", err)
+      }
+
+      setManagedClasses(classesWithDetails)
+
+      if (classesWithDetails.length > 0) {
+        setSelectedClass(classesWithDetails[0])
+        await loadClassDetails(classesWithDetails[0])
       }
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Failed to load classes")
@@ -111,9 +131,23 @@ export function TeacherClassesDashboard() {
                   await loadClassDetails(classTeacher)
                 }}
               >
-                <div className="font-semibold">{classTeacher.class_name}</div>
-                <div className="text-sm opacity-75">
-                  {classTeacher.is_form_tutor ? "Form Tutor" : "Subject Teacher"}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-semibold">{classTeacher.class_name}</div>
+                    <div className="text-sm opacity-75">
+                      {classTeacher.is_form_tutor ? "Form Tutor" : "Subject Teacher"}
+                    </div>
+                  </div>
+                  {classTeacher.class_code && (
+                    <Badge variant="secondary" className="font-mono text-xs flex items-center gap-1">
+                      <Hash className="w-3 h-3" />
+                      {classTeacher.class_code}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-3 text-sm opacity-90">
+                  <Users className="w-4 h-4" />
+                  <span>{classTeacher.student_count || 0} Students</span>
                 </div>
               </div>
             ))}

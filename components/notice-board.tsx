@@ -2,7 +2,8 @@
 
 export function NoticeBoard() {
   const notices = [
-    { author: "Jenyfer Lopez", time: "5 min ago", text: "Great School managemensom simply dummy text of the printing" },
+    { author: "Admin", time: "1 day ago", text: "Reminder: Mid-term exams are scheduled for next week. Please check the updated timetable." },
+    { author: "Admin", time: "1 day ago", text: "Reminder: Mid-term exams are scheduled for next week. Please check the updated timetable." },
     { author: "Killar Miller", time: "2 min ago", text: "Great School managemensom simply dummy text of the printing" },
     { author: "Jenyfer Lopez", time: "5 min ago", text: "Great School managemensom simply" },
     { author: "Mike Huasy", time: "5 min ago", text: "Great School managemensom simply" },

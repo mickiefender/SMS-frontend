@@ -15,9 +15,6 @@ import { ClassSubjectsManagement } from "@/components/class-subjects-management"
 import { EnrollStudentsInClass } from "@/components/enroll-students-in-class"
 import { AssignTeachersToClass } from "@/components/assign-teachers-to-class"
 import { AssignSubjectTeachers } from "@/components/assign-subject-teachers"
-import Loader from '@/components/loader'
-
-
 
 interface Class {
   id: number
@@ -26,6 +23,21 @@ interface Class {
   level?: number
   capacity?: number
   is_active?: boolean
+  form_tutor?: {
+    id: number
+    name: string
+    email: string
+    phone: string
+    gender: string
+  }
+  teachers?: Array<{
+    id: number
+    name: string
+    email: string
+    phone: string
+    gender: string
+    is_form_tutor: boolean
+  }>
 }
 
 interface Level {
@@ -194,9 +206,8 @@ function ClassesPageContent() {
 
   const filteredClasses = classes.filter(
     (c) =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()))
       
-  )
 
   const totalPages = Math.ceil(filteredClasses.length / itemsPerPage)
   const paginatedClasses = filteredClasses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -284,10 +295,10 @@ function ClassesPageContent() {
         />
       </div>
 
-      {/* Classes Table/List */}
+      {/* Classes Table with Teacher Information */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4 border-b">
-          <CardTitle className="text-lg">All Classes</CardTitle>
+          <CardTitle className="text-lg">All Class Schedule</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -299,64 +310,102 @@ function ClassesPageContent() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Class Name
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-12">
+                      ID
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Code
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-12">
+                      Photo
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Level
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Teacher Name
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Capacity
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Gender
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Actions
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Subject
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Class
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Section
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Mobile No
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      E-mail
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Action
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedClasses.map((cls) => (
+                  {paginatedClasses.map((cls, idx) => (
                     <tr key={cls.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-blue-100 p-2 rounded-lg">
-                            <Users2 size={18} className="text-blue-600" />
+                      <td className="px-4 py-3 text-gray-600">#{cls.code}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
+                            idx % 5 === 0 ? 'bg-blue-500' :
+                            idx % 5 === 1 ? 'bg-green-500' :
+                            idx % 5 === 2 ? 'bg-orange-500' :
+                            idx % 5 === 3 ? 'bg-pink-500' :
+                            'bg-purple-500'
+                          }`}>
+                            {cls.form_tutor?.name?.charAt(0).toUpperCase() || '?'}
                           </div>
-                          <span className="font-semibold text-gray-900">{cls.name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {cls.form_tutor?.name || 'Not Assigned'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 capitalize">
+                        {cls.form_tutor?.gender || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">—</td>
+                      <td className="px-4 py-3 text-gray-600">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          #{cls.code}
+                          {cls.name}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{cls.level || "—"}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Users size={16} className="text-gray-400" />
-                          <span className="text-gray-900">{cls.capacity || "—"}</span>
-                        </div>
+                      <td className="px-4 py-3 text-gray-600">—</td>
+                      <td className="px-4 py-3 text-gray-600">—</td>
+                      <td className="px-4 py-3 text-gray-600">—</td>
+                      <td className="px-4 py-3 text-gray-600 font-medium">
+                        {cls.form_tutor?.phone || '—'}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-4 py-3 text-gray-600 text-xs">
+                        <a href={`mailto:${cls.form_tutor?.email}`} className="text-blue-600 hover:underline">
+                          {cls.form_tutor?.email || '—'}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
                           <button 
                             onClick={() => handleEdit(cls)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit class"
                           >
-                            <Edit2 size={18} />
+                            <Edit2 size={16} />
                           </button>
                           <button 
                             onClick={() => handleDelete(cls.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete class"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                           <Button 
                             variant="outline" 
@@ -366,7 +415,7 @@ function ClassesPageContent() {
                               setSelectedClassName(cls.name)
                               setSheetOpen(true)
                             }}
-                            className="ml-2 border-green-200 text-green-700 hover:bg-green-50"
+                            className="ml-1 border-green-200 text-green-700 hover:bg-green-50 h-8 px-2 text-xs"
                           >
                             Manage
                           </Button>

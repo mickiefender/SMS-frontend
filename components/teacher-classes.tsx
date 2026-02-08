@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { academicsAPI } from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 export function TeacherClasses() {
   const [classes, setClasses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -27,6 +29,10 @@ export function TeacherClasses() {
 
   if (loading) return <div className="text-center py-4">Loading classes...</div>
 
+  const handleClassClick = (classId: string) => {
+    router.push(`/dashboard/teacher/classes/${classId}`)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -38,11 +44,22 @@ export function TeacherClasses() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {classes.map((cls) => (
-              <div key={cls.id} className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
+              <div
+                key={cls.id}
+                className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                onClick={() => handleClassClick(cls.id)}
+              >
                 <h3 className="font-semibold text-lg">{cls.name}</h3>
                 <p className="text-sm text-muted-foreground">Class Code: {cls.code || "N/A"}</p>
                 <p className="text-sm mt-2">Stream: {cls.stream || "N/A"}</p>
-                <Button size="sm" className="mt-4">
+                <Button
+                  size="sm"
+                  className="mt-4"
+                  onClick={(e) => {
+                    e.stopPropagation() // prevent the div's onClick from firing as well
+                    handleClassClick(cls.id)
+                  }}
+                >
                   View Details
                 </Button>
               </div>

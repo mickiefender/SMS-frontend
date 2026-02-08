@@ -4,22 +4,20 @@ import { ProtectedRoute } from "@/lib/protected-route"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, Users, ClipboardList, CheckCircle, TrendingUp, FileText, MessageSquare, Award } from "lucide-react"
 import { useState, useEffect } from "react"
-import { academicsAPI, assignmentAPI } from "@/lib/api"
-import { useAuthContext } from "@/lib/auth-context"
-import TeacherClassesDashboard from "@/components/TeacherClassesDashboard"
-import AttendanceTracker from "@/components/AttendanceTracker"
-import GradesManagement from "@/components/GradesManagement"
+import { academicsAPI, assignmentAPI, usersAPI } from "@/lib/api"
+import { useAuthContext as useAuth } from "@/lib/auth-context"
+
 import AssignmentManagement from "@/components/AssignmentManagement"
-import AssignmentSubmissionGrading from "@/components/AssignmentSubmissionGrading"
 import StudentPerformance from "@/components/StudentPerformance"
 import LearningMaterials from "@/components/LearningMaterials"
 import TeacherMessaging from "@/components/TeacherMessaging"
 
 export default function TeacherPage() {
-  const { user } = useAuthContext()
+  const { user } = useAuth()
   const [stats, setStats] = useState({
     classes: 0,
     students: 0,
+    total_school_students: 0,
     pending_assignments: 0,
     pending_submissions: 0,
   })
@@ -27,20 +25,36 @@ export default function TeacherPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [classesRes, assignmentsRes, submissionsRes] = await Promise.all([
+        const [classesRes, assignmentsRes, submissionsRes, studentsRes] = await Promise.all([
           academicsAPI.classes(),
           assignmentAPI.list(),
           assignmentAPI.submissions(),
+          usersAPI.students(),
         ])
 
         const classes = classesRes.data.results || classesRes.data || []
         const assignments = assignmentsRes.data.results || assignmentsRes.data || []
         const submissions = submissionsRes.data.results || submissionsRes.data || []
+        const allStudents = studentsRes.data.results || studentsRes.data || []
+        const totalStudentsCount = studentsRes.data.count || allStudents.length
         const pendingSubmissions = submissions.filter((s: any) => s.status === "submitted").length
+
+        // Calculate unique students across all classes to avoid double counting
+        const uniqueStudentIds = new Set()
+        classes.forEach((cls: any) => {
+          const enrollments = cls.student_enrollments || cls.students || []
+          if (Array.isArray(enrollments)) {
+            enrollments.forEach((e: any) => {
+              const id = typeof e === "object" ? e.id || e.student_id : e
+              uniqueStudentIds.add(id)
+            })
+          }
+        })
 
         setStats({
           classes: classes.length,
-          students: classes.reduce((total: number, cls: any) => total + (cls.student_enrollments?.length || 0), 0),
+          students: uniqueStudentIds.size,
+          total_school_students: totalStudentsCount,
           pending_assignments: assignments.filter((a: any) => a.status === "active").length,
           pending_submissions: pendingSubmissions,
         })
@@ -84,8 +98,11 @@ export default function TeacherPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-gray-900">{stats.students}</p>
-              <p className="text-xs text-gray-500 mt-1">Enrolled students</p>
+              <div className="flex items-baseline gap-1">
+                <p className="text-3xl font-bold text-gray-900">{stats.students}</p>
+                <span className="text-sm text-gray-500">/ {stats.total_school_students}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">My students / Total school students</p>
             </CardContent>
           </Card>
 

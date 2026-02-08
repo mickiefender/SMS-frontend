@@ -4,9 +4,11 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { academicsAPI, authAPI, assignmentAPI } from "@/lib/api"
-import { BookOpen, DollarSign, Calendar, FileText, Bell, Edit2, Download, Share2, ClipboardList } from "lucide-react"
+import { BookOpen, DollarSign, Calendar, FileText, Edit2, Download, Share2, ClipboardList } from "lucide-react"
 import Image from "next/image"
 import Loader from '@/components/loader'
+import { NoticeBoard } from "@/components/notice-board"
+import AssignmentSubmissionModal from "@/components/AssignmentSubmissionModal"
 
 interface DashboardData {
   upcomingExams: any[]
@@ -14,7 +16,6 @@ interface DashboardData {
   events: any[]
   documents: any[]
   userProfile: any
-  notices: any[]
   examResults: any[]
   schoolFees: any[]
   assignments: any[]
@@ -25,19 +26,20 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true)
   const [profilePic, setProfilePic] = useState<string>("")
   const [assignments, setAssignments] = useState<any[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [user, exams, fees, events, documents, notices, results, assignmentsRes] = await Promise.all([
+        const [user, exams, fees, events, documents, results, assignmentsRes] = await Promise.all([
           authAPI.me(),
           academicsAPI.exams(),
           academicsAPI.schoolFees(),
           academicsAPI.events(),
           academicsAPI.documents(),
-          academicsAPI.notices(),
           academicsAPI.examResults(),
-          assignmentAPI.studentAssignments(),
+          assignmentAPI.list(),
         ])
 
         // Get upcoming exams
@@ -51,7 +53,6 @@ export default function StudentDashboard() {
 
         const allEvents = events.data.results || events.data || []
         const allDocuments = documents.data.results || documents.data || []
-        const allNotices = (notices.data.results || notices.data || []).slice(0, 5)
         const allResults = (results.data.results || results.data || []).slice(0, 6)
         const allAssignments = assignmentsRes.data.results || assignmentsRes.data || []
         setAssignments(allAssignments)
@@ -62,7 +63,6 @@ export default function StudentDashboard() {
           events: allEvents,
           documents: allDocuments,
           userProfile: user.data,
-          notices: allNotices,
           examResults: allResults,
           schoolFees: allFees,
           assignments: allAssignments,
@@ -92,6 +92,16 @@ export default function StudentDashboard() {
   useEffect(() => {
     // TODO: Fetch grades data here
   }, [])
+
+  const handleOpenModal = (assignment: any) => {
+    setSelectedAssignment(assignment)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setSelectedAssignment(null)
+    setIsModalOpen(false)
+  }
 
   const cards = [
     {
@@ -243,27 +253,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Notice Board */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notice Board
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {data?.notices?.map((notice, index) => (
-                  <div key={index} className="border-l-4 border-blue-500 pl-3 py-2">
-                    <p className="text-xs text-gray-500">{new Date(notice.created_at).toLocaleDateString()}</p>
-                    <p className="font-semibold text-sm">{notice.posted_by_name}</p>
-                    <p className="text-sm text-gray-700 line-clamp-2">{notice.content}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <NoticeBoard />
       </div>
 
       {/* My Assignments Section */}
@@ -282,7 +272,7 @@ export default function StudentDashboard() {
                     {assignment.subject_name} - Due: {new Date(assignment.due_date).toLocaleDateString()}
                   </p>
                 </div>
-                <Button>Submit</Button>
+                <Button onClick={() => handleOpenModal(assignment)}>Submit</Button>
               </div>
             ))}
           </div>
@@ -343,7 +333,132 @@ export default function StudentDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* My Fees Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-red-500" />
+                My Fees & Expenses
+              </CardTitle>
+              <CardDescription>Your fee status and payment history</CardDescription>
+            </div>
+            <Button className="bg-blue-600">Download Statement</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Fee Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-sm text-gray-600">Total Due</p>
+                <p className="text-2xl font-bold text-red-600">
+                  $
+                  {(
+                    (data?.schoolFees || [])
+                      .filter((f: any) => f.status === "pending" || f.status === "partial")
+                      .reduce((sum: number, f: any) => sum + (parseFloat(f.amount_due) || 0), 0) - 
+                    (data?.schoolFees || [])
+                      .filter((f: any) => f.status === "pending" || f.status === "partial")
+                      .reduce((sum: number, f: any) => sum + (parseFloat(f.amount_paid) || 0), 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <p className="text-sm text-gray-600">Total Paid</p>
+                <p className="text-2xl font-bold text-green-600">
+                  $
+                  {(
+                    (data?.schoolFees || [])
+                      .reduce((sum: number, f: any) => sum + (parseFloat(f.amount_paid) || 0), 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-600">Total Charged</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  $
+                  {(
+                    (data?.schoolFees || [])
+                      .reduce((sum: number, f: any) => sum + (parseFloat(f.amount_due) || 0), 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            {/* Fees Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left py-3 px-4 font-semibold">Fee Type</th>
+                    <th className="text-left py-3 px-4 font-semibold">Amount Due</th>
+                    <th className="text-left py-3 px-4 font-semibold">Amount Paid</th>
+                    <th className="text-left py-3 px-4 font-semibold">Balance</th>
+                    <th className="text-left py-3 px-4 font-semibold">Due Date</th>
+                    <th className="text-left py-3 px-4 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.schoolFees && data.schoolFees.length > 0 ? (
+                    data.schoolFees.map((fee: any, index: number) => {
+                      const balance = (parseFloat(fee.amount_due) || 0) - (parseFloat(fee.amount_paid) || 0)
+                      const statusColor =
+                        fee.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : fee.status === "partial"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : fee.status === "overdue"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+
+                      return (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{fee.title}</td>
+                          <td className="py-3 px-4">${(parseFloat(fee.amount_due) || 0).toFixed(2)}</td>
+                          <td className="py-3 px-4 text-green-600 font-medium">${(parseFloat(fee.amount_paid) || 0).toFixed(2)}</td>
+                          <td className="py-3 px-4 font-medium">${balance.toFixed(2)}</td>
+                          <td className="py-3 px-4">{new Date(fee.due_date).toLocaleDateString()}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
+                              {fee.status.charAt(0).toUpperCase() + fee.status.slice(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                        No fees found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Payment Methods Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-blue-900">Need to Pay?</p>
+              <p className="text-sm text-blue-800 mt-1">
+                Contact your school admin or visit the payment portal to pay your outstanding fees online.
+              </p>
+              <Button className="mt-3 bg-blue-600 hover:bg-blue-700">Go to Payment Portal</Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedAssignment && (
+        <AssignmentSubmissionModal
+          assignment={selectedAssignment}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   )
 }
-
