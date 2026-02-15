@@ -83,7 +83,7 @@ export default function ManageDocumentsPage() {
       if (editingDoc) {
         await academicsAPI.updateDocument(editingDoc.id, formDataToSend)
       } else {
-        await academicsAPI.createDocument(formDataToSend)
+        await academicsAPI.uploadDocument(formDataToSend)
       }
 
       setIsOpen(false)

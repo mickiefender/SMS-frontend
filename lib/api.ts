@@ -45,7 +45,6 @@ export const authAPI = {
 
 export const schoolsAPI = {
   list: () => apiClient.get("/schools/schools/"),
-  getById: (id: number) => apiClient.get(`/schools/schools/${id}/`),
   create: (data: any) => apiClient.post("/schools/schools/", data),
   update: (id: number, data: any) => apiClient.put(`/schools/schools/${id}/`, data),
   suspend: (id: number) => apiClient.post(`/schools/schools/${id}/suspend/`),
@@ -59,7 +58,6 @@ export const academicsAPI = {
   put: (endpoint: string, data: any, config?: any) => apiClient.put(`/academics${endpoint}`, data, config),
   delete: (endpoint: string) => apiClient.delete(`/academics${endpoint}`),
 
-  teachers: () => apiClient.get("/users/teachers/"),
   faculties: () => apiClient.get("/academics/faculties/"),
   departments: () => apiClient.get("/academics/departments/"),
   classes: () => apiClient.get("/academics/classes/"),
@@ -129,12 +127,31 @@ export const academicsAPI = {
   createEvent: (data: any) => apiClient.post("/academics/events/", data),
   updateEvent: (id: number, data: any) => apiClient.put(`/academics/events/${id}/`, data),
   deleteEvent: (id: number) => apiClient.delete(`/academics/events/${id}/`),
+  // Document Folders
+  documentFolders: (params?: any) => apiClient.get("/academics/document-folders/", { params }),
+  createDocumentFolder: (data: any) => apiClient.post("/academics/document-folders/", data),
+  updateDocumentFolder: (id: number, data: any) => apiClient.put(`/academics/document-folders/${id}/`, data),
+  deleteDocumentFolder: (id: number) => apiClient.delete(`/academics/document-folders/${id}/`),
+  getFolderChildren: (id: number) => apiClient.get(`/academics/document-folders/${id}/children/`),
+  getFolderBreadcrumb: (id: number) => apiClient.get(`/academics/document-folders/${id}/breadcrumb/`),
+  
+  // Documents
   documents: (params?: any) => apiClient.get("/academics/documents/", { params }),
-  createDocument: (data: FormData) =>
+  uploadDocument: (data: FormData) =>
     apiClient.post("/academics/documents/", data, { headers: { "Content-Type": "multipart/form-data" } }),
   updateDocument: (id: number, data: FormData) =>
     apiClient.put(`/academics/documents/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
   deleteDocument: (id: number) => apiClient.delete(`/academics/documents/${id}/`),
+  moveDocumentToFolder: (id: number, folderId: number | null) =>
+    apiClient.patch(`/academics/documents/${id}/move_to_folder/`, { folder_id: folderId }),
+  shareDocumentWithClasses: (id: number, classIds: number[]) =>
+    apiClient.post(`/academics/documents/${id}/share_with_classes/`, { class_ids: classIds }),
+  getDocumentSharedClasses: (id: number) => apiClient.get(`/academics/documents/${id}/shared_classes/`),
+  searchDocuments: (query: string) => apiClient.get(`/academics/documents/search/?q=${query}`),
+  bulkDeleteDocuments: (documentIds: number[]) =>
+    apiClient.post("/academics/documents/bulk_delete/", { document_ids: documentIds }),
+  
+  // AI Question Generation
   generateQuestionsFromDocument: (docId: number, settings: any) =>
     apiClient.post(`/academics/documents/${docId}/generate_questions/`, settings),
   generateQuestionsFromTopic: (payload: any) =>
@@ -170,6 +187,32 @@ export const gradesAPI = {
   create: (data: any) => apiClient.post("/students/grades/", data),
   update: (id: number, data: any) => apiClient.put(`/students/grades/${id}/`, data),
   delete: (id: number) => apiClient.delete(`/students/grades/${id}/`),
+}
+
+export const messagingAPI = {
+  // Messages
+  messages: () => apiClient.get("/messaging/messages/"),
+  sentMessages: () => apiClient.get("/messaging/messages/sent/"),
+  createMessage: (data: any) => apiClient.post("/messaging/messages/", data),
+  markMessageAsRead: (id: number) => apiClient.post(`/messaging/messages/${id}/mark_as_read/`),
+  
+  // Announcements
+  announcements: () => apiClient.get("/messaging/announcements/"),
+  getAnnouncement: (id: number) => apiClient.get(`/messaging/announcements/${id}/`),
+  createAnnouncement: (data: any) => apiClient.post("/messaging/announcements/", data),
+  updateAnnouncement: (id: number, data: any) => apiClient.put(`/messaging/announcements/${id}/`, data),
+  deleteAnnouncement: (id: number) => apiClient.delete(`/messaging/announcements/${id}/`),
+  publishAnnouncement: (id: number) => apiClient.post(`/messaging/announcements/${id}/publish/`),
+  markAnnouncementAsRead: (id: number) => apiClient.post(`/messaging/announcements/${id}/mark_as_read/`),
+  getAnnouncementReadBy: (id: number) => apiClient.get(`/messaging/announcements/${id}/read_by/`),
+  
+  // Notices
+  notices: () => apiClient.get("/messaging/notices/"),
+  getNotice: (id: number) => apiClient.get(`/messaging/notices/${id}/`),
+  createNotice: (data: any) => apiClient.post("/messaging/notices/", data),
+  updateNotice: (id: number, data: any) => apiClient.put(`/messaging/notices/${id}/`, data),
+  deleteNotice: (id: number) => apiClient.delete(`/messaging/notices/${id}/`),
+  pinNotice: (id: number) => apiClient.post(`/messaging/notices/${id}/pin/`),
 }
 
 export const usersAPI = {
@@ -299,36 +342,42 @@ export const timetableAPI = {
 }
 
 export const assignmentAPI = {
-  list: () => apiClient.get("/assignments/"),
-  create: (data: any) => apiClient.post("/assignments/", data),
-  update: (id: number, data: any) => apiClient.put(`/assignments/${id}/`, data),
-  delete: (id: number) => apiClient.delete(`/assignments/${id}/`),
-  submissions: () => apiClient.get("/assignments/submissions/"),
-  gradeSubmission: (id: number, data: any) => apiClient.post(`/assignments/submissions/${id}/grade/`, data),
+  list: () => apiClient.get("/academics/assignments/"),
+  create: (data: any) => apiClient.post("/academics/assignments/", data),
+  update: (id: number, data: any) => apiClient.put(`/academics/assignments/${id}/`, data),
+  delete: (id: number) => apiClient.delete(`/academics/assignments/${id}/`),
+  submissions: () => apiClient.get("/academics/assignments/submissions/"),
+  gradeSubmission: (id: number, data: any) => apiClient.post(`/academics/assignments/submissions/${id}/grade/`, data),
 }
-
 
 export const billingAPI = {
   // Fee Types Management
-  feeTypes: () => apiClient.get("/billing/fee-types/"),
-  createFeeType: (data: any) => apiClient.post("/billing/fee-types/", data),
-  updateFeeType: (id: number, data: any) => apiClient.put(`/billing/fee-types/${id}/`, data),
-  assignFeeToStudent: (data: any) => apiClient.post("/billing/student-fees/", data),
-  assignFeeToClass: (data: any) => apiClient.post("/billing/class-fees/", data),
-  individualFees: () => apiClient.get("/billing/student-fees/"),
-  deleteFeeType: (id: number) => apiClient.delete(`/billing/fee-types/${id}/`),
+  fees: () => apiClient.get("/billing/fees/"),
+  createFee: (data: any) => apiClient.post("/billing/fees/", data),
+  updateFee: (id: number, data: any) => apiClient.put(`/billing/fees/${id}/`, data),
+  deleteFee: (id: number) => apiClient.delete(`/billing/fees/${id}/`),
   
-  // Student Fees
-  studentFees: () => apiClient.get("/billing/student-fees/"),
-  createStudentFee: (data: any) => apiClient.post("/billing/student-fees/", data),
-  updateStudentFee: (id: number, data: any) => apiClient.put(`/billing/student-fees/${id}/`, data),
-  deleteStudentFee: (id: number) => apiClient.delete(`/billing/student-fees/${id}/`),
+  // School-wide Fee Assignments
+  schoolFeeAssignments: () => apiClient.get("/billing/school-fee-assignments/"),
+  createSchoolFeeAssignment: (data: any) => apiClient.post("/billing/school-fee-assignments/", data),
+  updateSchoolFeeAssignment: (id: number, data: any) => apiClient.put(`/billing/school-fee-assignments/${id}/`, data),
+  deleteSchoolFeeAssignment: (id: number) => apiClient.delete(`/billing/school-fee-assignments/${id}/`),
+  applySchoolFeeToStudents: (id: number) => apiClient.post(`/billing/school-fee-assignments/${id}/apply_to_students/`),
   
-  // Class Fees
-  classFees: () => apiClient.get("/billing/class-fees/"),
-  createClassFee: (data: any) => apiClient.post("/billing/class-fees/", data),
-  updateClassFee: (id: number, data: any) => apiClient.put(`/billing/class-fees/${id}/`, data),
-  deleteClassFee: (id: number) => apiClient.delete(`/billing/class-fees/${id}/`),
+  // Class Fee Assignments
+  classFeeAssignments: () => apiClient.get("/billing/class-fee-assignments/"),
+  createClassFeeAssignment: (data: any) => apiClient.post("/billing/class-fee-assignments/", data),
+  updateClassFeeAssignment: (id: number, data: any) => apiClient.put(`/billing/class-fee-assignments/${id}/`, data),
+  deleteClassFeeAssignment: (id: number) => apiClient.delete(`/billing/class-fee-assignments/${id}/`),
+  applyClassFeeToStudents: (id: number) => apiClient.post(`/billing/class-fee-assignments/${id}/apply_to_students/`),
+  
+  // Individual Student Fee Assignments
+  studentFeeAssignments: () => apiClient.get("/billing/student-fee-assignments/"),
+  createStudentFeeAssignment: (data: any) => apiClient.post("/billing/student-fee-assignments/", data),
+  updateStudentFeeAssignment: (id: number, data: any) => apiClient.put(`/billing/student-fee-assignments/${id}/`, data),
+  deleteStudentFeeAssignment: (id: number) => apiClient.delete(`/billing/student-fee-assignments/${id}/`),
+  myFees: () => apiClient.get("/billing/student-fee-assignments/my_fees/"),
+  markFeePaid: (id: number) => apiClient.post(`/billing/student-fee-assignments/${id}/mark_paid/`),
   
   // Invoices
   invoices: () => apiClient.get("/billing/invoices/"),
@@ -341,32 +390,4 @@ export const billingAPI = {
   createPayment: (data: any) => apiClient.post("/billing/payments/", data),
   updatePayment: (id: number, data: any) => apiClient.put(`/billing/payments/${id}/`, data),
   deletePayment: (id: number) => apiClient.delete(`/billing/payments/${id}/`),
-}
-
-
-
-export const messagingAPI = {
-  // Messages
-  messages: () => apiClient.get("/messaging/messages/"),
-  sentMessages: () => apiClient.get("/messaging/messages/sent/"),
-  createMessage: (data: any) => apiClient.post("/messaging/messages/", data),
-  markMessageAsRead: (id: number) => apiClient.post(`/messaging/messages/${id}/mark_as_read/`),
-  
-  // Announcements
-  announcements: () => apiClient.get("/messaging/announcements/"),
-  getAnnouncement: (id: number) => apiClient.get(`/messaging/announcements/${id}/`),
-  createAnnouncement: (data: any) => apiClient.post("/messaging/announcements/", data),
-  updateAnnouncement: (id: number, data: any) => apiClient.put(`/messaging/announcements/${id}/`, data),
-  deleteAnnouncement: (id: number) => apiClient.delete(`/messaging/announcements/${id}/`),
-  publishAnnouncement: (id: number) => apiClient.post(`/messaging/announcements/${id}/publish/`),
-  markAnnouncementAsRead: (id: number) => apiClient.post(`/messaging/announcements/${id}/mark_as_read/`),
-  getAnnouncementReadBy: (id: number) => apiClient.get(`/messaging/announcements/${id}/read_by/`),
-  
-  // Notices
-  notices: () => apiClient.get("/messaging/notices/"),
-  getNotice: (id: number) => apiClient.get(`/messaging/notices/${id}/`),
-  createNotice: (data: any) => apiClient.post("/messaging/notices/", data),
-  updateNotice: (id: number, data: any) => apiClient.put(`/messaging/notices/${id}/`, data),
-  deleteNotice: (id: number) => apiClient.delete(`/messaging/notices/${id}/`),
-  pinNotice: (id: number) => apiClient.post(`/messaging/notices/${id}/pin/`),
 }

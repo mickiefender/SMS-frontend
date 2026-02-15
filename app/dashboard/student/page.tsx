@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { academicsAPI, authAPI, assignmentAPI } from "@/lib/api"
+import { academicsAPI, authAPI, assignmentAPI, billingAPI } from "@/lib/api"
 import { BookOpen, DollarSign, Calendar, FileText, Edit2, Download, Share2, ClipboardList } from "lucide-react"
 import Image from "next/image"
 import Loader from '@/components/loader'
@@ -35,7 +35,7 @@ export default function StudentDashboard() {
         const [user, exams, fees, events, documents, results, assignmentsRes] = await Promise.all([
           authAPI.me(),
           academicsAPI.exams(),
-          academicsAPI.schoolFees(),
+          billingAPI.myFees(),
           academicsAPI.events(),
           academicsAPI.documents(),
           academicsAPI.examResults(),

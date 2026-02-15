@@ -1,20 +1,18 @@
 "use client"
 
-import { SheetTitle } from "@/components/ui/sheet"
-import { SheetHeader } from "@/components/ui/sheet"
-import { SheetContent } from "@/components/ui/sheet"
-import { Sheet } from "@/components/ui/sheet"
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { academicsAPI } from "@/lib/api"
+import { academicsAPI, authAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, Download, FileText, Search, Sparkles, X, Settings, Bell, MessageCircle, BookOpen, Calendar, BarChart3, Zap, Copy } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Trash2, Download, FileText, Search, Sparkles, X, Settings, Bell, MessageCircle, BookOpen, Calendar, BarChart3, Zap, Copy, FolderOpen } from "lucide-react"
 import Loader from "@/components/loader"
+import TeacherFileExplorer from "@/components/teacher-file-explorer"
 
 
 interface Document {
@@ -65,6 +63,19 @@ export default function TeacherDocumentsPage() {
     try {
       setLoading(true)
       setError(null)
+
+      // Refresh user data from server to ensure it's up-to-date
+      try {
+        const userRes = await authAPI.me()
+        if (userRes.data) {
+          sessionStorage.setItem('user', JSON.stringify(userRes.data))
+        }
+      } catch (userErr) {
+        console.error('[v0] Failed to refresh user data:', userErr)
+        // Do not block page load, but log the error.
+        // The upload might fail if the user data is stale.
+      }
+
       const [docsRes, subjectsRes, classesRes] = await Promise.all([
         academicsAPI.documents(),
         academicsAPI.subjects(),
@@ -82,6 +93,41 @@ export default function TeacherDocumentsPage() {
     }
   }
 
+  const handleFileSelectAndUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const formDataToSend = new FormData()
+    formDataToSend.append("title", file.name) // Use file name as title
+    formDataToSend.append("document_type", "notes") // Default type
+    formDataToSend.append("file", file)
+
+    try {
+      setAiLoading(true)
+      setError(null)
+      const uploadResponse = await academicsAPI.uploadDocument(formDataToSend)
+      const newDocId = uploadResponse.data.id
+
+      await fetchData() // Refresh documents list
+
+      // Open AI panel and trigger generation
+      setSelectedDocId(newDocId)
+      setAiMode("document")
+      setShowAIPanel(true)
+      handleGenerateQuestions(newDocId) // Pass new ID directly
+    } catch (err: any) {
+      console.error("[v0] Quick Upload error:", err)
+      const errorData = err?.response?.data
+      let errorMsg = "Failed to upload and process document"
+      if (errorData) {
+        // ... (existing error handling logic)
+      }
+      setError(errorMsg)
+      setAiLoading(false)
+    }
+  }
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -94,11 +140,11 @@ export default function TeacherDocumentsPage() {
       formDataToSend.append("title", formData.title)
       formDataToSend.append("document_type", formData.document_type)
       formDataToSend.append("description", formData.description)
-      if (formData.related_subject) formDataToSend.append("related_subject", formData.related_subject)
-      if (formData.related_class) formDataToSend.append("related_class", formData.related_class)
+      if (formData.related_subject && formData.related_subject !== "") formDataToSend.append("related_subject", formData.related_subject)
+      if (formData.related_class && formData.related_class !== "") formDataToSend.append("related_class", formData.related_class)
       if (formData.file) formDataToSend.append("file", formData.file)
 
-      await academicsAPI.createDocument(formDataToSend)
+      await academicsAPI.uploadDocument(formDataToSend)
 
       setIsOpen(false)
       setFormData({ title: "", document_type: "notes", description: "", related_subject: "", related_class: "", file: null })
@@ -107,11 +153,31 @@ export default function TeacherDocumentsPage() {
       fetchData()
     } catch (err: any) {
       console.error("[v0] Upload error:", err)
-      const errorMsg = err?.response?.data?.detail || 
-                      err?.response?.data?.file?.[0] ||
-                      err?.response?.data?.title?.[0] ||
-                      err?.message ||
-                      "Failed to upload document"
+      const errorData = err?.response?.data
+      let errorMsg = "Failed to upload document"
+
+      if (errorData) {
+        if (errorData.school && (errorData.school[0].includes("required") || errorData.school[0].includes("null"))) {
+          errorMsg = "Your account is not associated with a school. Please contact an administrator to be assigned to a school before uploading materials."
+        } else {
+            try {
+              const firstErrorKey = Object.keys(errorData)[0]
+              const firstErrorValue = errorData[firstErrorKey]
+              
+              if (typeof firstErrorValue === 'string') {
+                errorMsg = `${firstErrorKey}: ${firstErrorValue}`
+              } else if (Array.isArray(firstErrorValue)) {
+                errorMsg = `${firstErrorKey}: ${firstErrorValue[0]}`
+              } else {
+                errorMsg = JSON.stringify(errorData)
+              }
+            } catch {
+              errorMsg = "An unknown error occurred during upload."
+            }
+        }
+      } else {
+        errorMsg = err?.message || "Failed to upload document"
+      }
       setError(errorMsg)
     }
   }
@@ -129,7 +195,7 @@ export default function TeacherDocumentsPage() {
     }
   }
 
-  const handleGenerateQuestions = async () => {
+  const handleGenerateQuestions = async (newDocId: any) => {
     if (aiMode === "document" && !selectedDocId) {
       setAiError("No document selected")
       return
@@ -181,6 +247,26 @@ export default function TeacherDocumentsPage() {
     }
   }
 
+  const handleGenerateQuestionsFromExplorer = async (docId: number) => {
+    setSelectedDocId(docId)
+    setAiMode("document")
+    setShowAIPanel(true)
+    setAiQuestions(null)
+    setAiError(null)
+    
+    // Automatically trigger AI generation for the selected document
+    try {
+      setAiLoading(true)
+      const response = await academicsAPI.generateQuestionsFromDocument(docId, aiSettings)
+      setAiQuestions(response.data)
+    } catch (err: any) {
+      console.error("AI generation failed:", err)
+      setAiError(err.response?.data?.error || "Failed to generate questions. Please try again.")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -195,163 +281,195 @@ export default function TeacherDocumentsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">Learning Materials</h1>
-          <p className="text-gray-600 mt-2">Upload teaching materials and use AI to generate exam questions</p>
+          <p className="text-gray-600 mt-2">Manage your teaching materials and use AI to generate exam questions</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button 
-            onClick={() => {
-              setShowAIPanel(true)
-              setAiMode("topic")
-              setSelectedDocId(null)
-              setAiQuestions(null)
-              setAiError(null)
-            }}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg transition-shadow"
-          >
-            <Sparkles className="w-5 h-5 mr-2" />
-            Teacher AI
-          </Button>
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                <Plus className="w-5 h-5 mr-2" />
-                Upload Material
+      </div>
+
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="file-manager" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="file-manager" className="flex items-center gap-2">
+            <FolderOpen className="w-4 h-4" />
+            File Manager
+          </TabsTrigger>
+          <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            AI Assistant
+          </TabsTrigger>
+        </TabsList>
+
+        {/* File Manager Tab */}
+        <TabsContent value="file-manager" className="mt-6">
+          <TeacherFileExplorer onGenerateQuestions={handleGenerateQuestionsFromExplorer} />
+        </TabsContent>
+
+        {/* AI Assistant Tab */}
+        <TabsContent value="ai-assistant" className="mt-6">
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                onClick={() => {
+                  setShowAIPanel(true)
+                  setAiMode("topic")
+                  setSelectedDocId(null)
+                  setAiQuestions(null)
+                  setAiError(null)
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg transition-shadow"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Generate from Topic
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Upload Study Material</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>}
+              <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Quick Upload
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Quick Upload Material</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>}
 
-                <div>
-                  <Label>Material Title *</Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Chapter 5 Notes"
-                  />
-                </div>
+                    <div>
+                      <Label>Material Title *</Label>
+                      <Input
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="e.g., Chapter 5 Notes"
+                      />
+                    </div>
 
-                <div>
-                  <Label>Material Type</Label>
-                  <select
-                    value={formData.document_type}
-                    onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
-                  >
-                    <option value="notes">Notes</option>
-                    <option value="assignment">Assignment</option>
-                    <option value="syllabus">Syllabus</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+                    <div>
+                      <Label>Material Type</Label>
+                      <select
+                        value={formData.document_type}
+                        onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
+                        className="w-full border rounded px-3 py-2"
+                      >
+                        <option value="notes">Notes</option>
+                        <option value="assignment">Assignment</option>
+                        <option value="syllabus">Syllabus</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Brief description..."
-                    rows={3}
-                  />
-                </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Brief description..."
+                        rows={3}
+                      />
+                    </div>
 
-                <div>
-                  <Label>Subject (Optional)</Label>
-                  <select
-                    value={formData.related_subject}
-                    onChange={(e) => setFormData({ ...formData, related_subject: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
-                  >
-                    <option value="">Select Subject</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <Label>Subject (Optional)</Label>
+                      <select
+                        value={formData.related_subject}
+                        onChange={(e) => setFormData({ ...formData, related_subject: e.target.value })}
+                        className="w-full border rounded px-3 py-2"
+                      >
+                        <option value="">Select Subject</option>
+                        {subjects.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <Label>Class (Optional)</Label>
-                  <select
-                    value={formData.related_class}
-                    onChange={(e) => setFormData({ ...formData, related_class: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
-                  >
-                    <option value="">Select Class</option>
-                    {classes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <Label>Class (Optional)</Label>
+                      <select
+                        value={formData.related_class}
+                        onChange={(e) => setFormData({ ...formData, related_class: e.target.value })}
+                        className="w-full border rounded px-3 py-2"
+                      >
+                        <option value="">Select Class</option>
+                        {classes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <Label>Upload File *</Label>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
-                  />
-                </div>
+                    <div>
+                      <Label>Upload File *</Label>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
+                      />
+                    </div>
 
-                <Button type="submit" className="w-full bg-blue-600">
-                  Upload Material
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
-
-        <Card>
-          <CardContent>
-            <div className="space-y-3">
-              {documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{doc.title}</h3>
-                    <p className="text-xs text-gray-500">
-                      {doc.document_type} • {new Date(doc.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedDocId(doc.id)
-                        setShowAIPanel(true)
-                        setAiQuestions(null)
-                        setAiError(null)
-                      }}
-                      className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Generate Questions
+                    <Button type="submit" className="w-full bg-blue-600">
+                      Upload Material
                     </Button>
-                    <a href={doc.file} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </a>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(doc.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* AI Question Generation Modal */}
-        {showAIPanel && (
+            {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
+
+            {/* Documents List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Materials</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{doc.title}</h3>
+                        <p className="text-xs text-gray-500">
+                          {doc.document_type} • {new Date(doc.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedDocId(doc.id)
+                            setAiMode("document")
+                            setShowAIPanel(true)
+                            setAiQuestions(null)
+                            setAiError(null)
+                          }}
+                          className="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          Generate Questions
+                        </Button>
+                        <a href={doc.file} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </a>
+                        <Button size="sm" variant="outline" onClick={() => handleDelete(doc.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* AI Question Generation Modal */}
+      {showAIPanel && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-xl">
               {/* Modal Header */}
@@ -612,9 +730,8 @@ export default function TeacherDocumentsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

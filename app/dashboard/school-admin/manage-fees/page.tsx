@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Edit2, Plus, DollarSign, Users2, GraduationCap } from "lucide-react"
+import { Trash2, Edit2, Plus, DollarSign, Users2, GraduationCap, Building2 } from "lucide-react"
 
 // Helper function to safely format currency amounts
 const formatCurrency = (amount: any): string => {
@@ -20,34 +20,48 @@ const formatCurrency = (amount: any): string => {
   }
 }
 
-interface FeeType {
+interface Fee {
   id: number
   name: string
   description: string
   amount: number
+  fee_type: string
   is_active: boolean
   is_mandatory: boolean
 }
 
-interface StudentIndividualFee {
-  fee_type_name: string
-  paid: any
+interface SchoolFeeAssignment {
   id: number
-  fee_type: FeeType
-  student_name: string
-  class_name: string
+  school: number
+  school_name: string
+  fee: number
+  fee_name: string
+  fee_details: Fee
   amount: number
   due_date: string
-  status: string
 }
 
 interface ClassFeeAssignment {
-  fee_type_name: string
   id: number
-  fee_type: FeeType
+  class_obj: number
   class_name: string
+  fee: number
+  fee_name: string
+  fee_details: Fee
   amount: number
   due_date: string
+}
+
+interface StudentFeeAssignment {
+  id: number
+  student: number
+  student_name: string
+  fee: number
+  fee_name: string
+  fee_details: Fee
+  amount: number
+  due_date: string
+  paid: boolean
 }
 
 export default function ManageSchoolFeesPage() {
@@ -56,15 +70,25 @@ export default function ManageSchoolFeesPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Fee Types State
-  const [feeTypes, setFeeTypes] = useState<FeeType[]>([])
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingFeeType, setEditingFeeType] = useState<FeeType | null>(null)
-  const [feeTypeForm, setFeeTypeForm] = useState({
+  const [fees, setFees] = useState<Fee[]>([])
+  const [isFeeDialogOpen, setIsFeeDialogOpen] = useState(false)
+  const [editingFee, setEditingFee] = useState<Fee | null>(null)
+  const [feeForm, setFeeForm] = useState({
     name: "",
     description: "",
     amount: "",
+    fee_type: "academic",
     is_active: true,
     is_mandatory: true,
+  })
+
+  // School-wide Assignment State
+  const [schoolAssignments, setSchoolAssignments] = useState<SchoolFeeAssignment[]>([])
+  const [isSchoolDialogOpen, setIsSchoolDialogOpen] = useState(false)
+  const [schoolForm, setSchoolForm] = useState({
+    fee: "",
+    amount: "",
+    due_date: "",
   })
 
   // Class Assignment State
@@ -72,20 +96,19 @@ export default function ManageSchoolFeesPage() {
   const [classes, setClasses] = useState<any[]>([])
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false)
   const [classForm, setClassForm] = useState({
-    fee_type: "",
+    fee: "",
     class_obj: "",
     amount: "",
     due_date: "",
   })
 
   // Individual Student Assignment State
-  const [individualFees, setIndividualFees] = useState<StudentIndividualFee[]>([])
+  const [studentAssignments, setStudentAssignments] = useState<StudentFeeAssignment[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [isStudentDialogOpen, setIsStudentDialogOpen] = useState(false)
   const [studentForm, setStudentForm] = useState({
-    fee_type: "",
+    fee: "",
     student: "",
-    class_obj: "",
     amount: "",
     due_date: "",
   })
@@ -99,38 +122,40 @@ export default function ManageSchoolFeesPage() {
   useEffect(() => {
     let newFilteredStudents = students
 
-    if (studentForm.class_obj) {
-      newFilteredStudents = newFilteredStudents.filter(
-        (s) => s.current_class?.id === parseInt(studentForm.class_obj)
-      )
-    }
-
     if (studentFilter) {
       newFilteredStudents = newFilteredStudents.filter((s) => {
-        const studentName = s.full_name || s.student_name || s.username || ""
+        const studentName = s.full_name || s.first_name + " " + s.last_name || s.username || ""
         return studentName.toLowerCase().includes(studentFilter.toLowerCase())
       })
     }
     setFilteredStudents(newFilteredStudents)
-  }, [students, studentFilter, studentForm.class_obj])
+  }, [students, studentFilter])
 
   const fetchAllData = async () => {
     try {
       setLoading(true)
-      // Fetch all required data from correct endpoints
-      const [feeTypesRes, classesRes, studentsRes, classFeesRes, studentFeesRes] = await Promise.all([
-        billingAPI.feeTypes(),
+      const [feesRes, classesRes, studentsRes, schoolFeesRes, classFeesRes, studentFeesRes] = await Promise.all([
+        billingAPI.fees(),
         academicsAPI.classes(),
         usersAPI.students(),
-        billingAPI.classFees(),
-        billingAPI.individualFees(),
-      ]).catch(() => [{ data: { results: [] } }, { data: { results: [] } }, { data: { results: [] } }, { data: { results: [] } }, { data: { results: [] } }])
+        billingAPI.schoolFeeAssignments(),
+        billingAPI.classFeeAssignments(),
+        billingAPI.studentFeeAssignments(),
+      ]).catch(() => [
+        { data: { results: [] } },
+        { data: { results: [] } },
+        { data: { results: [] } },
+        { data: { results: [] } },
+        { data: { results: [] } },
+        { data: { results: [] } },
+      ])
 
-      setFeeTypes(feeTypesRes.data.results || feeTypesRes.data || [])
+      setFees(feesRes.data.results || feesRes.data || [])
       setClasses(classesRes.data.results || classesRes.data || [])
       setStudents(studentsRes.data.results || studentsRes.data || [])
+      setSchoolAssignments(schoolFeesRes.data.results || schoolFeesRes.data || [])
       setClassAssignments(classFeesRes.data.results || classFeesRes.data || [])
-      setIndividualFees(studentFeesRes.data.results || studentFeesRes.data || [])
+      setStudentAssignments(studentFeesRes.data.results || studentFeesRes.data || [])
       setError(null)
     } catch (err: any) {
       console.error("Error fetching data:", err)
@@ -140,48 +165,75 @@ export default function ManageSchoolFeesPage() {
     }
   }
 
-  // Fee Types Management
-  const handleSaveFeeType = async (e: React.FormEvent) => {
+  // Fee Management
+  const handleSaveFee = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      if (!feeTypeForm.name || !feeTypeForm.amount) {
+      if (!feeForm.name || !feeForm.amount) {
         setError("Please fill required fields")
         return
       }
 
       const data = {
-        name: feeTypeForm.name,
-        description: feeTypeForm.description,
-        amount: parseFloat(feeTypeForm.amount),
-        is_active: feeTypeForm.is_active,
-        is_mandatory: feeTypeForm.is_mandatory,
+        name: feeForm.name,
+        description: feeForm.description,
+        amount: parseFloat(feeForm.amount),
+        fee_type: feeForm.fee_type,
+        is_active: feeForm.is_active,
+        is_mandatory: feeForm.is_mandatory,
       }
 
-      if (editingFeeType) {
-        await billingAPI.updateFeeType(editingFeeType.id, data)
+      if (editingFee) {
+        await billingAPI.updateFee(editingFee.id, data)
       } else {
-        await billingAPI.createFeeType(data)
+        await billingAPI.createFee(data)
       }
 
-      setIsDialogOpen(false)
-      setEditingFeeType(null)
-      setFeeTypeForm({ name: "", description: "", amount: "", is_active: true, is_mandatory: true })
+      setIsFeeDialogOpen(false)
+      setEditingFee(null)
+      setFeeForm({ name: "", description: "", amount: "", fee_type: "academic", is_active: true, is_mandatory: true })
       setError(null)
-      // Wait for data to be fetched before closing dialog
       await fetchAllData()
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to save fee type")
+      setError(err?.response?.data?.detail || "Failed to save fee")
     }
   }
 
-  const handleDeleteFeeType = async (id: number) => {
-    if (confirm("Are you sure you want to delete this fee type?")) {
+  const handleDeleteFee = async (id: number) => {
+    if (confirm("Are you sure you want to delete this fee?")) {
       try {
-        await billingAPI.deleteFeeType(id)
+        await billingAPI.deleteFee(id)
         fetchAllData()
       } catch (err) {
-        setError("Failed to delete fee type")
+        setError("Failed to delete fee")
       }
+    }
+  }
+
+  // School-wide Fee Assignment
+  const handleAssignToSchool = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (!schoolForm.fee || !schoolForm.amount || !schoolForm.due_date) {
+        setError("Please fill all required fields")
+        return
+      }
+
+      const data = {
+        fee: parseInt(schoolForm.fee),
+        amount: parseFloat(schoolForm.amount),
+        due_date: schoolForm.due_date,
+      }
+
+      await billingAPI.createSchoolFeeAssignment(data)
+      setIsSchoolDialogOpen(false)
+      setSchoolForm({ fee: "", amount: "", due_date: "" })
+      setError(null)
+      alert("Fee assigned to entire school successfully!")
+      await fetchAllData()
+    } catch (err: any) {
+      console.error("School assignment error:", err.response?.data)
+      setError(err?.response?.data?.detail || err?.message || "Failed to assign fee to school")
     }
   }
 
@@ -189,33 +241,27 @@ export default function ManageSchoolFeesPage() {
   const handleAssignToClass = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      if (!classForm.fee_type || !classForm.class_obj || !classForm.amount || !classForm.due_date) {
+      if (!classForm.fee || !classForm.class_obj || !classForm.amount || !classForm.due_date) {
         setError("Please fill all required fields")
         return
       }
 
       const data = {
-        fee_type: parseInt(classForm.fee_type),
+        fee: parseInt(classForm.fee),
         class_obj: parseInt(classForm.class_obj),
         amount: parseFloat(classForm.amount),
         due_date: classForm.due_date,
       }
 
-      console.log("[v0] Creating class fee with data:", data)
-      const response = await billingAPI.assignFeeToClass(data)
-      console.log("[v0] Class fee creation response:", response?.data || response)
-      console.log("[v0] Response status:", response?.status)
-
+      await billingAPI.createClassFeeAssignment(data)
       setIsClassDialogOpen(false)
-      setClassForm({ fee_type: "", class_obj: "", amount: "", due_date: "" })
+      setClassForm({ fee: "", class_obj: "", amount: "", due_date: "" })
       setError(null)
       alert("Fee assigned to class successfully!")
-      // Wait for fetchAllData to complete before closing
       await fetchAllData()
-      console.log("[v0] Data refetched after assignment")
     } catch (err: any) {
-      console.error("[v0] Class assignment error:", err.response?.data)
-      setError(err?.response?.data?.detail || err?.message || "Failed to assign fees to class")
+      console.error("Class assignment error:", err.response?.data)
+      setError(err?.response?.data?.detail || err?.message || "Failed to assign fee to class")
     }
   }
 
@@ -223,42 +269,33 @@ export default function ManageSchoolFeesPage() {
   const handleAssignToStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      if (!studentForm.fee_type || !studentForm.student || !studentForm.class_obj || !studentForm.amount || !studentForm.due_date) {
+      if (!studentForm.fee || !studentForm.student || !studentForm.amount || !studentForm.due_date) {
         setError("Please fill all required fields")
         return
       }
 
       const data = {
-        fee_type: parseInt(studentForm.fee_type),
+        fee: parseInt(studentForm.fee),
         student: parseInt(studentForm.student),
-        class_obj: parseInt(studentForm.class_obj),
         amount: parseFloat(studentForm.amount),
         due_date: studentForm.due_date,
       }
 
-      console.log("[v0] Creating student fee with data:", data)
-      const response = await billingAPI.assignFeeToStudent(data)
-      console.log("[v0] Student fee creation response:", response?.data || response)
-      console.log("[v0] Response status:", response?.status)
-
+      await billingAPI.createStudentFeeAssignment(data)
       setIsStudentDialogOpen(false)
-      setStudentForm({ fee_type: "", student: "", class_obj: "", amount: "", due_date: "" })
+      setStudentForm({ fee: "", student: "", amount: "", due_date: "" })
       setError(null)
       alert("Fee assigned to student successfully!")
-      // Wait for fetchAllData to complete before closing
       await fetchAllData()
-      console.log("[v0] Data refetched after student assignment")
     } catch (err: any) {
-      console.error("[v0] Student fee assignment error:", err.response?.data)
-      setError(err?.response?.data?.detail || err?.message || "Failed to assign fees to student")
+      console.error("Student fee assignment error:", err.response?.data)
+      setError(err?.response?.data?.detail || err?.message || "Failed to assign fee to student")
     }
   }
 
   return (
     <div className="p-6 space-y-6">
-      {loading && (
-        <div className="flex items-center justify-center min-h-screen">Loading...</div>
-      )}
+      {loading && <div className="flex items-center justify-center min-h-screen">Loading...</div>}
 
       {!loading && (
         <div>
@@ -268,7 +305,7 @@ export default function ManageSchoolFeesPage() {
                 <DollarSign className="w-8 h-8 text-green-600" />
                 School Fees Management
               </h1>
-              <p className="text-gray-600 mt-1">Manage fee types, bulk assignments, and individual student fees</p>
+              <p className="text-gray-600 mt-1">Manage fee types and assignments at all levels</p>
             </div>
           </div>
 
@@ -282,8 +319,9 @@ export default function ManageSchoolFeesPage() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="fee-types">Fee Types</TabsTrigger>
+              <TabsTrigger value="school-assignment">Assign to School</TabsTrigger>
               <TabsTrigger value="class-assignment">Assign to Class</TabsTrigger>
               <TabsTrigger value="student-assignment">Assign to Student</TabsTrigger>
             </TabsList>
@@ -292,12 +330,12 @@ export default function ManageSchoolFeesPage() {
             <TabsContent value="fee-types" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">Fee Types</h2>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isFeeDialogOpen} onOpenChange={setIsFeeDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       onClick={() => {
-                        setEditingFeeType(null)
-                        setFeeTypeForm({ name: "", description: "", amount: "", is_active: true, is_mandatory: true })
+                        setEditingFee(null)
+                        setFeeForm({ name: "", description: "", amount: "", fee_type: "academic", is_active: true, is_mandatory: true })
                       }}
                       className="bg-purple-600"
                     >
@@ -307,23 +345,23 @@ export default function ManageSchoolFeesPage() {
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
-                      <DialogTitle>{editingFeeType ? "Edit Fee Type" : "Create New Fee Type"}</DialogTitle>
+                      <DialogTitle>{editingFee ? "Edit Fee Type" : "Create New Fee Type"}</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSaveFeeType} className="space-y-4">
+                    <form onSubmit={handleSaveFee} className="space-y-4">
                       <div>
-                        <Label>Fee Type Name *</Label>
+                        <Label>Fee Name *</Label>
                         <Input
-                          value={feeTypeForm.name}
-                          onChange={(e) => setFeeTypeForm({ ...feeTypeForm, name: e.target.value })}
-                          placeholder="e.g., School Fees, PTA Fee"
+                          value={feeForm.name}
+                          onChange={(e) => setFeeForm({ ...feeForm, name: e.target.value })}
+                          placeholder="e.g., Tuition Fee, PTA Dues"
                         />
                       </div>
 
                       <div>
                         <Label>Description</Label>
                         <Input
-                          value={feeTypeForm.description}
-                          onChange={(e) => setFeeTypeForm({ ...feeTypeForm, description: e.target.value })}
+                          value={feeForm.description}
+                          onChange={(e) => setFeeForm({ ...feeForm, description: e.target.value })}
                           placeholder="Fee description"
                         />
                       </div>
@@ -332,33 +370,47 @@ export default function ManageSchoolFeesPage() {
                         <Label>Default Amount *</Label>
                         <Input
                           type="number"
-                          value={feeTypeForm.amount}
-                          onChange={(e) => setFeeTypeForm({ ...feeTypeForm, amount: e.target.value })}
+                          step="0.01"
+                          value={feeForm.amount}
+                          onChange={(e) => setFeeForm({ ...feeForm, amount: e.target.value })}
                           placeholder="0.00"
                         />
+                      </div>
+
+                      <div>
+                        <Label>Fee Type *</Label>
+                        <select
+                          value={feeForm.fee_type}
+                          onChange={(e) => setFeeForm({ ...feeForm, fee_type: e.target.value })}
+                          className="w-full border rounded px-3 py-2"
+                        >
+                          <option value="academic">Academic</option>
+                          <option value="administrative">Administrative</option>
+                          <option value="other">Other</option>
+                        </select>
                       </div>
 
                       <div className="flex gap-4">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            checked={feeTypeForm.is_active}
-                            onChange={(e) => setFeeTypeForm({ ...feeTypeForm, is_active: e.target.checked })}
+                            checked={feeForm.is_active}
+                            onChange={(e) => setFeeForm({ ...feeForm, is_active: e.target.checked })}
                           />
                           <span>Active</span>
                         </label>
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            checked={feeTypeForm.is_mandatory}
-                            onChange={(e) => setFeeTypeForm({ ...feeTypeForm, is_mandatory: e.target.checked })}
+                            checked={feeForm.is_mandatory}
+                            onChange={(e) => setFeeForm({ ...feeForm, is_mandatory: e.target.checked })}
                           />
                           <span>Mandatory</span>
                         </label>
                       </div>
 
                       <Button type="submit" className="w-full bg-purple-600">
-                        {editingFeeType ? "Update" : "Create"} Fee Type
+                        {editingFee ? "Update" : "Create"} Fee Type
                       </Button>
                     </form>
                   </DialogContent>
@@ -366,34 +418,35 @@ export default function ManageSchoolFeesPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {feeTypes.length > 0 ? (
-                  feeTypes.map((feeType) => (
-                    <Card key={feeType.id}>
+                {fees.length > 0 ? (
+                  fees.map((fee) => (
+                    <Card key={fee.id}>
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div>
-                            <CardTitle className="text-lg">{feeType.name}</CardTitle>
-                            <CardDescription className="text-sm mt-1">{feeType.description || "No description"}</CardDescription>
+                            <CardTitle className="text-lg">{fee.name}</CardTitle>
+                            <CardDescription className="text-sm mt-1">{fee.description || "No description"}</CardDescription>
                           </div>
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setEditingFeeType(feeType)
-                                setFeeTypeForm({
-                                  name: feeType.name,
-                                  description: feeType.description,
-                                  amount: feeType.amount.toString(),
-                                  is_active: feeType.is_active,
-                                  is_mandatory: feeType.is_mandatory,
+                                setEditingFee(fee)
+                                setFeeForm({
+                                  name: fee.name,
+                                  description: fee.description,
+                                  amount: fee.amount.toString(),
+                                  fee_type: fee.fee_type,
+                                  is_active: fee.is_active,
+                                  is_mandatory: fee.is_mandatory,
                                 })
-                                setIsDialogOpen(true)
+                                setIsFeeDialogOpen(true)
                               }}
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDeleteFeeType(feeType.id)}>
+                            <Button size="sm" variant="outline" onClick={() => handleDeleteFee(fee.id)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -403,18 +456,22 @@ export default function ManageSchoolFeesPage() {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Amount:</span>
-                            <span className="font-semibold">{formatCurrency(feeType.amount)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Status:</span>
-                            <span className={`px-2 py-1 rounded text-xs ${feeType.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                              {feeType.is_active ? "Active" : "Inactive"}
-                            </span>
+                            <span className="font-semibold">{formatCurrency(fee.amount)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Type:</span>
-                            <span className={`px-2 py-1 rounded text-xs ${feeType.is_mandatory ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>
-                              {feeType.is_mandatory ? "Mandatory" : "Optional"}
+                            <span className="capitalize">{fee.fee_type}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`px-2 py-1 rounded text-xs ${fee.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                              {fee.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Required:</span>
+                            <span className={`px-2 py-1 rounded text-xs ${fee.is_mandatory ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>
+                              {fee.is_mandatory ? "Mandatory" : "Optional"}
                             </span>
                           </div>
                         </div>
@@ -429,6 +486,130 @@ export default function ManageSchoolFeesPage() {
               </div>
             </TabsContent>
 
+            {/* School-wide Assignment Tab */}
+            <TabsContent value="school-assignment" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold flex items-center gap-2">
+                  <Building2 className="w-6 h-6" />
+                  Assign Fees to Entire School
+                </h2>
+                <Dialog open={isSchoolDialogOpen} onOpenChange={setIsSchoolDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setSchoolForm({ fee: "", amount: "", due_date: "" })
+                      }}
+                      className="bg-orange-600"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Assign to School
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Assign Fee to All Students in School</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAssignToSchool} className="space-y-4">
+                      <div>
+                        <Label>Fee Type *</Label>
+                        <select
+                          value={schoolForm.fee}
+                          onChange={(e) => {
+                            const selectedFee = fees.find(f => f.id === parseInt(e.target.value))
+                            setSchoolForm({ 
+                              ...schoolForm, 
+                              fee: e.target.value,
+                              amount: selectedFee ? selectedFee.amount.toString() : ""
+                            })
+                          }}
+                          className="w-full border rounded px-3 py-2"
+                        >
+                          <option value="">Select Fee Type</option>
+                          {fees.filter((f) => f.is_active).map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name} - {formatCurrency(f.amount)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label>Amount *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={schoolForm.amount}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, amount: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Due Date *</Label>
+                        <Input type="date" value={schoolForm.due_date} onChange={(e) => setSchoolForm({ ...schoolForm, due_date: e.target.value })} />
+                      </div>
+
+                      <Button type="submit" className="w-full bg-orange-600">
+                        Assign to All Students
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 font-semibold">Fee Type</th>
+                          <th className="text-left py-3 px-4 font-semibold">Amount</th>
+                          <th className="text-left py-3 px-4 font-semibold">Due Date</th>
+                          <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {schoolAssignments.length > 0 ? (
+                          schoolAssignments.map((assignment) => (
+                            <tr key={assignment.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">{assignment.fee_name}</td>
+                              <td className="py-3 px-4 font-semibold">{formatCurrency(assignment.amount)}</td>
+                              <td className="py-3 px-4">{new Date(assignment.due_date).toLocaleDateString()}</td>
+                              <td className="py-3 px-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    if (confirm("Delete this school-wide fee assignment?")) {
+                                      try {
+                                        await billingAPI.deleteSchoolFeeAssignment(assignment.id)
+                                        fetchAllData()
+                                      } catch (err) {
+                                        setError("Failed to delete assignment")
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-gray-500">
+                              No school-wide assignments yet
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Class Assignment Tab */}
             <TabsContent value="class-assignment" className="space-y-4">
               <div className="flex justify-between items-center">
@@ -440,7 +621,7 @@ export default function ManageSchoolFeesPage() {
                   <DialogTrigger asChild>
                     <Button
                       onClick={() => {
-                        setClassForm({ fee_type: "", class_obj: "", amount: "", due_date: "" })
+                        setClassForm({ fee: "", class_obj: "", amount: "", due_date: "" })
                       }}
                       className="bg-blue-600"
                     >
@@ -456,14 +637,21 @@ export default function ManageSchoolFeesPage() {
                       <div>
                         <Label>Fee Type *</Label>
                         <select
-                          value={classForm.fee_type}
-                          onChange={(e) => setClassForm({ ...classForm, fee_type: e.target.value })}
+                          value={classForm.fee}
+                          onChange={(e) => {
+                            const selectedFee = fees.find(f => f.id === parseInt(e.target.value))
+                            setClassForm({ 
+                              ...classForm, 
+                              fee: e.target.value,
+                              amount: selectedFee ? selectedFee.amount.toString() : ""
+                            })
+                          }}
                           className="w-full border rounded px-3 py-2"
                         >
                           <option value="">Select Fee Type</option>
-                          {feeTypes.filter((f) => f.is_active).map((f) => (
+                          {fees.filter((f) => f.is_active).map((f) => (
                             <option key={f.id} value={f.id}>
-                              {f.name}
+                              {f.name} - {formatCurrency(f.amount)}
                             </option>
                           ))}
                         </select>
@@ -489,6 +677,7 @@ export default function ManageSchoolFeesPage() {
                         <Label>Amount *</Label>
                         <Input
                           type="number"
+                          step="0.01"
                           value={classForm.amount}
                           onChange={(e) => setClassForm({ ...classForm, amount: e.target.value })}
                           placeholder="0.00"
@@ -518,21 +707,40 @@ export default function ManageSchoolFeesPage() {
                           <th className="text-left py-3 px-4 font-semibold">Class</th>
                           <th className="text-left py-3 px-4 font-semibold">Amount</th>
                           <th className="text-left py-3 px-4 font-semibold">Due Date</th>
+                          <th className="text-left py-3 px-4 font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {classAssignments.length > 0 ? (
                           classAssignments.map((assignment) => (
                             <tr key={assignment.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-4">{assignment.fee_type_name || assignment.fee_type?.name || "Unknown"}</td>
+                              <td className="py-3 px-4">{assignment.fee_name}</td>
                               <td className="py-3 px-4">{assignment.class_name}</td>
                               <td className="py-3 px-4 font-semibold">{formatCurrency(assignment.amount)}</td>
                               <td className="py-3 px-4">{new Date(assignment.due_date).toLocaleDateString()}</td>
+                              <td className="py-3 px-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    if (confirm("Delete this class fee assignment?")) {
+                                      try {
+                                        await billingAPI.deleteClassFeeAssignment(assignment.id)
+                                        fetchAllData()
+                                      } catch (err) {
+                                        setError("Failed to delete assignment")
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="py-8 text-center text-gray-500">
+                            <td colSpan={5} className="py-8 text-center text-gray-500">
                               No class assignments yet
                             </td>
                           </tr>
@@ -549,13 +757,13 @@ export default function ManageSchoolFeesPage() {
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold flex items-center gap-2">
                   <Users2 className="w-6 h-6" />
-                  Assign Fees to Students
+                  Assign Fees to Individual Students
                 </h2>
                 <Dialog open={isStudentDialogOpen} onOpenChange={setIsStudentDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       onClick={() => {
-                        setStudentForm({ fee_type: "", student: "", class_obj: "", amount: "", due_date: "" })
+                        setStudentForm({ fee: "", student: "", amount: "", due_date: "" })
                       }}
                       className="bg-green-600"
                     >
@@ -571,30 +779,21 @@ export default function ManageSchoolFeesPage() {
                       <div>
                         <Label>Fee Type *</Label>
                         <select
-                          value={studentForm.fee_type}
-                          onChange={(e) => setStudentForm({ ...studentForm, fee_type: e.target.value })}
+                          value={studentForm.fee}
+                          onChange={(e) => {
+                            const selectedFee = fees.find(f => f.id === parseInt(e.target.value))
+                            setStudentForm({ 
+                              ...studentForm, 
+                              fee: e.target.value,
+                              amount: selectedFee ? selectedFee.amount.toString() : ""
+                            })
+                          }}
                           className="w-full border rounded px-3 py-2"
                         >
                           <option value="">Select Fee Type</option>
-                          {feeTypes.filter((f) => f.is_active).map((f) => (
+                          {fees.filter((f) => f.is_active).map((f) => (
                             <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <Label>Class *</Label>
-                        <select
-                          value={studentForm.class_obj}
-                          onChange={(e) => setStudentForm({ ...studentForm, class_obj: e.target.value, student: "" })}
-                          className="w-full border rounded px-3 py-2"
-                        >
-                          <option value="">Select Class First</option>
-                          {classes.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
+                              {f.name} - {formatCurrency(f.amount)}
                             </option>
                           ))}
                         </select>
@@ -608,7 +807,6 @@ export default function ManageSchoolFeesPage() {
                           onChange={(e) => setStudentFilter(e.target.value)}
                           placeholder="Type to filter..."
                           className="mb-2"
-                          disabled={!studentForm.class_obj}
                         />
                       </div>
 
@@ -617,17 +815,14 @@ export default function ManageSchoolFeesPage() {
                         <select
                           value={studentForm.student}
                           onChange={(e) => setStudentForm({ ...studentForm, student: e.target.value })}
-                          disabled={!studentForm.class_obj}
-                          className="w-full border rounded px-3 py-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full border rounded px-3 py-2"
                         >
-                          <option value="">
-                            {studentForm.class_obj ? "Select Student" : "Select Class First"}
-                          </option>
+                          <option value="">Select Student</option>
                           {filteredStudents.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.full_name || s.student_name || s.username || `User ${s.id}`}
-                              </option>
-                            ))}
+                            <option key={s.id} value={s.id}>
+                              {s.full_name || s.first_name + " " + s.last_name || s.username || `User ${s.id}`}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
@@ -635,6 +830,7 @@ export default function ManageSchoolFeesPage() {
                         <Label>Amount *</Label>
                         <Input
                           type="number"
+                          step="0.01"
                           value={studentForm.amount}
                           onChange={(e) => setStudentForm({ ...studentForm, amount: e.target.value })}
                           placeholder="0.00"
@@ -662,36 +858,53 @@ export default function ManageSchoolFeesPage() {
                         <tr className="border-b">
                           <th className="text-left py-3 px-4 font-semibold">Student</th>
                           <th className="text-left py-3 px-4 font-semibold">Fee Type</th>
-                          <th className="text-left py-3 px-4 font-semibold">Class</th>
                           <th className="text-left py-3 px-4 font-semibold">Amount</th>
                           <th className="text-left py-3 px-4 font-semibold">Due Date</th>
                           <th className="text-left py-3 px-4 font-semibold">Status</th>
+                          <th className="text-left py-3 px-4 font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {individualFees.length > 0 ? (
-                          individualFees.map((fee) => (
-                            <tr key={fee.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-4">{fee.student_name}</td>
-                              <td className="py-3 px-4">{fee.fee_type_name || fee.fee_type?.name || "Unknown"}</td>
-                              <td className="py-3 px-4">{fee.class_name}</td>
-                              <td className="py-3 px-4 font-semibold">{formatCurrency(fee.amount)}</td>
-                              <td className="py-3 px-4">{new Date(fee.due_date).toLocaleDateString()}</td>
+                        {studentAssignments.length > 0 ? (
+                          studentAssignments.map((assignment) => (
+                            <tr key={assignment.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">{assignment.student_name}</td>
+                              <td className="py-3 px-4">{assignment.fee_name}</td>
+                              <td className="py-3 px-4 font-semibold">{formatCurrency(assignment.amount)}</td>
+                              <td className="py-3 px-4">{new Date(assignment.due_date).toLocaleDateString()}</td>
                               <td className="py-3 px-4">
                                 <span
                                   className={`px-3 py-1 rounded text-xs font-semibold ${
-                                    fee.paid ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                                    assignment.paid ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
                                   }`}
                                 >
-                                  {fee.paid ? "Paid" : "Pending"}
+                                  {assignment.paid ? "Paid" : "Pending"}
                                 </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    if (confirm("Delete this student fee assignment?")) {
+                                      try {
+                                        await billingAPI.deleteStudentFeeAssignment(assignment.id)
+                                        fetchAllData()
+                                      } catch (err) {
+                                        setError("Failed to delete assignment")
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500">
-                              No individual fees assigned yet
+                              No individual student assignments yet
                             </td>
                           </tr>
                         )}

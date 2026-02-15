@@ -65,18 +65,12 @@ const navSections: Record<string, NavSection[]> = {
          { label: "Admin Staff Management", href: "/dashboard/school-admin/manage-admin-staff", icon: Users },
         { label: "Students", href: "/dashboard/school-admin/students", icon: Users },
         { label: "Teachers", href: "/dashboard/school-admin/teachers", icon: User },
+        { label: "Student Assignment", href: "/dashboard/school-admin/student-assignment", icon: ClipboardCheck},
+        { label: "Teacher Assignment", href: "/dashboard/school-admin/teacher-assignment", icon: FilePen },
         
       ],
     },
-    {
-    label: "Finance",
-      icon: CreditCard,
-      items: [
-        { label: "Billing", href: "/dashboard/school-admin/billing", icon: CreditCard },
-        { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard }, { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
-        { label: "Expenses", href: "/dashboard/school-admin/expenses", icon: FileText },
-      ],
-      },
+    
     {
       label: "Academics",
       icon: BookOpen,
@@ -86,18 +80,27 @@ const navSections: Record<string, NavSection[]> = {
         { label: "Class Routine", href: "/dashboard/school-admin/routine", icon: Clock },
         { label: "Timetable", href: "/dashboard/school-admin/timetable", icon: Calendar },
         { label: "Grading", href: "/dashboard/school-admin/grading", icon: ClipboardEdit },
+        { label: "Attendance", href: "/dashboard/school-admin/attendance", icon: CheckSquare },
+        { label: "Exam", href: "/dashboard/school-admin/exam", icon: FileText },
       ],
     },
+    {
+    label: "Finance",
+      icon: CreditCard,
+      items: [
+        { label: "Manage Types", href: "/dashboard/school-admin/manage-fees", icon: CreditCard },
+        { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard }, { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
+        { label: "Expenses", href: "/dashboard/school-admin/expenses", icon: FileText },
+      ],
+      },
     {
       label: "Operations",
       icon: Wrench,
       items: [
-        { label: "Attendance", href: "/dashboard/school-admin/attendance", icon: CheckSquare },
-        { label: "Exam", href: "/dashboard/school-admin/exam", icon: FileText },
+        
         { label: "Transport", href: "/dashboard/school-admin/transport", icon: Bus },
         { label: "Hostel", href: "/dashboard/school-admin/hostel", icon: Home },
-        { label: "Student Assignment", href: "/dashboard/school-admin/student-assignment", icon: ClipboardCheck},
-        { label: "Teacher Assignment", href: "/dashboard/school-admin/teacher-assignment", icon: FilePen },
+        
       ],
     },
     {
