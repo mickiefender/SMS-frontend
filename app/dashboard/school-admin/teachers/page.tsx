@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { useAuthContext } from "@/lib/auth-context"
-import { ChevronLeft, ChevronRight, Trash2, Edit2, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trash2, Edit2, Search, Eye } from "lucide-react"
+import Link from "next/link"
+import { ProfileAvatar } from "@/components/profile-avatar"
 
 interface Teacher {
   id: number
@@ -27,6 +29,7 @@ interface Teacher {
   experience?: number
   hire_date?: string
   is_active?: boolean
+  profile_picture_url?: string | null
 }
 
 function TeachersPageContent() {
@@ -353,7 +356,11 @@ function TeachersPageContent() {
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500" />
+                      <ProfileAvatar 
+                        src={teacher.profile_picture_url} 
+                        alt={getTeacherName(teacher)}
+                        size="md"
+                      />
                       <span className="font-medium text-gray-900">{getTeacherName(teacher)}</span>
                     </div>
                   </td>
@@ -362,6 +369,11 @@ function TeachersPageContent() {
                   <td className="px-6 py-3 text-gray-700">{teacher.phone || "N/A"}</td>
                   <td className="px-6 py-3">
                     <div className="flex gap-2">
+                      <Link href={`/dashboard/school-admin/teachers/${teacher.id}`}>
+                        <button className="text-purple-600 hover:text-purple-700" title="View Details">
+                          <Eye size={18} />
+                        </button>
+                      </Link>
                       <button onClick={() => handleEdit(teacher)} className="text-blue-600 hover:text-blue-700">
                         <Edit2 size={18} />
                       </button>

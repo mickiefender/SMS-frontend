@@ -4,11 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { gradesAPI, usersAPI, academicsAPI } from "@/lib/api"
+import { FileText, Award, Plus } from "lucide-react"
 
 interface Grade {
   id: number
   student: number
+  student_name?: string
   subject: number
+  subject_name?: string
   assessment_type: "exam" | "test" | "quiz" | "continuous" | "assignment" | "Exercise"
   score: number
   max_score: number
@@ -17,7 +20,11 @@ interface Grade {
   recorded_date: string
 }
 
-export function GradingSystem() {
+interface GradingSystemProps {
+  showTerminalReportLink?: boolean
+}
+
+export function GradingSystem({ showTerminalReportLink = true }: GradingSystemProps) {
   const [grades, setGrades] = useState<Grade[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [subjects, setSubjects] = useState<any[]>([])
@@ -31,6 +38,25 @@ export function GradingSystem() {
     score: "",
     max_score: "100",
   })
+
+  // Default max scores based on assessment type
+  const DEFAULT_MAX_SCORES: Record<string, number> = {
+    exam: 100,
+    test: 20,
+    quiz: 10,
+    assignment: 20,
+    continuous: 10,
+  }
+
+  // Handle assessment type change - auto-set max score
+  const handleAssessmentTypeChange = (value: string) => {
+    const defaultMax = DEFAULT_MAX_SCORES[value] || 100
+    setNewGrade(prev => ({
+      ...prev,
+      assessment_type: value as any,
+      max_score: defaultMax.toString(),
+    }))
+  }
 
   useEffect(() => {
     fetchData()
@@ -81,12 +107,22 @@ export function GradingSystem() {
     }
   }
 
-  const getStudentName = (id: number) => {
+  const getStudentName = (id: number, grade?: Grade) => {
+    // First try to use student_name from API if available
+    if (grade?.student_name) {
+      return grade.student_name
+    }
+    
     const student = students.find((s) => (s.user?.id || s.id) === id)
     return student?.user?.first_name ? `${student.user.first_name} ${student.user.last_name}` : `Student ${id}`
   }
 
-  const getSubjectName = (id: number) => {
+  const getSubjectName = (id: number, grade?: Grade) => {
+    // First try to use subject_name from API if available
+    if (grade?.subject_name) {
+      return grade.subject_name
+    }
+    
     const subject = subjects.find((s) => s.id === id)
     return subject?.name || subject?.code || `Subject ${id}`
   }
@@ -118,10 +154,43 @@ export function GradingSystem() {
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Grading System</CardTitle>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            Add Grade
-          </Button>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="w-5 h-5" />
+            Grading System
+          </CardTitle>
+          <div className="flex gap-2">
+            {showTerminalReportLink && (
+              <>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    // Navigate to terminal reports - parent component handles this
+                    const event = new CustomEvent('navigate', { detail: 'terminal-reports' })
+                    window.dispatchEvent(event)
+                  }}
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Terminal Reports
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    const event = new CustomEvent('navigate', { detail: 'position-reports' })
+                    window.dispatchEvent(event)
+                  }}
+                >
+                  <Award className="w-4 h-4 mr-1" />
+                  Positions
+                </Button>
+              </>
+            )}
+            <Button size="sm" onClick={() => setShowForm(!showForm)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add Grade
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -154,7 +223,7 @@ export function GradingSystem() {
               </select>
               <select
                 value={newGrade.assessment_type}
-                onChange={(e) => setNewGrade({ ...newGrade, assessment_type: e.target.value as any })}
+                onChange={(e) => handleAssessmentTypeChange(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md text-sm"
               >
                 <option value="exam">Exam</option>
@@ -226,8 +295,8 @@ export function GradingSystem() {
                 ) : (
                   filteredGrades.map((grade) => (
                     <tr key={grade.id} className="border-b hover:bg-muted/50">
-                      <td className="py-2 px-2 font-medium">{getStudentName(grade.student)}</td>
-                      <td className="py-2 px-2">{getSubjectName(grade.subject)}</td>
+                      <td className="py-2 px-2 font-medium">{getStudentName(grade.student, grade)}</td>
+                      <td className="py-2 px-2">{getSubjectName(grade.subject, grade)}</td>
                       <td className="py-2 px-2 capitalize">{grade.assessment_type}</td>
                       <td className="py-2 px-2">
                         {grade.score}/{grade.max_score}

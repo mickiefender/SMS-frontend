@@ -1,4 +1,4 @@
-import axios from "axios"
+ import axios from "axios"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
 
@@ -161,11 +161,35 @@ export const academicsAPI = {
   updateNotice: (id: number, data: any) => apiClient.put(`/academics/notices/${id}/`, data),
   deleteNotice: (id: number) => apiClient.delete(`/academics/notices/${id}/`),
   profilePictures: () => apiClient.get("/academics/profile-pictures/"),
+  profilePictureByUser: (userId: number) => apiClient.get(`/academics/profile-pictures/?user=${userId}`),
   createProfilePicture: (data: FormData) =>
     apiClient.post("/academics/profile-pictures/", data, { headers: { "Content-Type": "multipart/form-data" } }),
   updateProfilePicture: (id: number, data: FormData) =>
     apiClient.put(`/academics/profile-pictures/${id}/`, data, { headers: { "Content-Type": "multipart/form-data" } }),
   deleteProfilePicture: (id: number) => apiClient.delete(`/academics/profile-pictures/${id}/`),
+  
+  // Academic Sessions
+  academicSessions: () => apiClient.get("/academics/academic-sessions/"),
+  academicSessionsCurrent: () => apiClient.get("/academics/academic-sessions/current/"),
+  createAcademicSession: (data: any) => apiClient.post("/academics/academic-sessions/", data),
+  updateAcademicSession: (id: number, data: any) => apiClient.put(`/academics/academic-sessions/${id}/`, data),
+  deleteAcademicSession: (id: number) => apiClient.delete(`/academics/academic-sessions/${id}/`),
+  
+  // Grading Policies
+  gradingPolicies: (params?: any) => apiClient.get("/academics/grading-policies/", { params }),
+  gradingPoliciesBySession: (sessionId: number) => apiClient.get(`/academics/grading-policies/by_session/?session_id=${sessionId}`),
+  createGradingPolicy: (data: any) => apiClient.post("/academics/grading-policies/", data),
+  updateGradingPolicy: (id: number, data: any) => apiClient.put(`/academics/grading-policies/${id}/`, data),
+  deleteGradingPolicy: (id: number) => apiClient.delete(`/academics/grading-policies/${id}/`),
+  bulkCreateGradingPolicies: (data: any) => apiClient.post("/academics/grading-policies/bulk_create/", data),
+  
+  // Terminal Reports
+  terminalReports: (params?: any) => apiClient.get("/academics/terminal-reports/", { params }),
+  terminalReportDetail: (id: number) => apiClient.get(`/academics/terminal-reports/${id}/`),
+  generateTerminalReport: (data: any) => apiClient.post("/academics/terminal-reports/generate_report/", data),
+  calculatePositions: (data: any) => apiClient.post("/academics/terminal-reports/calculate_positions/", data),
+  publishTerminalReport: (id: number) => apiClient.post(`/academics/terminal-reports/${id}/publish/`),
+  addTerminalReportRemarks: (id: number, data: any) => apiClient.post(`/academics/terminal-reports/${id}/add_remarks/`, data),
 }
 
 export const announcementsAPI = {
@@ -180,6 +204,11 @@ export const attendanceAPI = {
   create: (data: any) => apiClient.post("/attendance/", data),
   bulkCreate: (data: any) => apiClient.post("/attendance/bulk_mark/", data),
   studentReport: (studentId: number) => apiClient.get(`/attendance/student_report/?student_id=${studentId}`),
+  // Enhanced endpoints
+  studentReportByDateRange: (studentId: number, startDate: string, endDate: string) => 
+    apiClient.get(`/attendance/student_report/?student_id=${studentId}&start_date=${startDate}&end_date=${endDate}`),
+  classAttendance: (classId: number, date: string) => 
+    apiClient.get(`/attendance/?class_obj=${classId}&date=${date}`),
 }
 
 export const gradesAPI = {
@@ -187,6 +216,10 @@ export const gradesAPI = {
   create: (data: any) => apiClient.post("/students/grades/", data),
   update: (id: number, data: any) => apiClient.put(`/students/grades/${id}/`, data),
   delete: (id: number) => apiClient.delete(`/students/grades/${id}/`),
+  lock: (id: number) => apiClient.post(`/students/grades/${id}/lock/`),
+  unlock: (id: number) => apiClient.post(`/students/grades/${id}/unlock/`),
+  lock_by_class: (data: any) => apiClient.post("/students/grades/lock_by_class/", data),
+  unlock_by_class: (data: any) => apiClient.post("/students/grades/unlock_by_class/", data),
 }
 
 export const messagingAPI = {
@@ -220,7 +253,7 @@ export const usersAPI = {
   getById: (id: number) => apiClient.get(`/users/users/${id}/`),
   teachers: () => apiClient.get("/users/teachers/"),
   getTeacherById: (id: number) => apiClient.get(`/users/teachers/${id}/`),
-  students: () => apiClient.get("/users/students/"),
+  students: (params?: any) => apiClient.get("/users/students/", { params }),
   getStudentById: (id: number) => apiClient.get(`/users/students/${id}/`),
   create: (data: any) => apiClient.post("/users/users/", data),
 
@@ -342,12 +375,14 @@ export const timetableAPI = {
 }
 
 export const assignmentAPI = {
-  list: () => apiClient.get("/academics/assignments/"),
-  create: (data: any) => apiClient.post("/academics/assignments/", data),
-  update: (id: number, data: any) => apiClient.put(`/academics/assignments/${id}/`, data),
-  delete: (id: number) => apiClient.delete(`/academics/assignments/${id}/`),
-  submissions: () => apiClient.get("/academics/assignments/submissions/"),
-  gradeSubmission: (id: number, data: any) => apiClient.post(`/academics/assignments/submissions/${id}/grade/`, data),
+  list: () => apiClient.get("/assignments/"),
+  create: (data: any) => apiClient.post("/assignments/", data),
+  update: (id: number, data: any) => apiClient.put(`/assignments/${id}/`, data),
+  delete: (id: number) => apiClient.delete(`/assignments/${id}/`),
+  submissions: () => apiClient.get("/assignments/submissions/"),
+  submitAssignment: (data: FormData) =>
+    apiClient.post("/assignments/submissions/", data, { headers: { "Content-Type": "multipart/form-data" } }),
+  gradeSubmission: (id: number, data: any) => apiClient.post(`/assignments/submissions/${id}/grade/`, data),
 }
 
 export const billingAPI = {

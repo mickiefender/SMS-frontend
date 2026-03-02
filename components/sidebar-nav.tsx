@@ -167,17 +167,17 @@ const navSections: Record<string, NavSection[]> = {
       href: "/dashboard/student",
       items: [
         { label: "Overview", href: "/dashboard/student", icon: LayoutDashboard },
-         { label: "Profile", href: "/dashboard/student/profile", icon: User },
-        { label: "Enrollment", href: "/dashboard/student/enrollment", icon: FilePen },
+        { label: "Profile", href: "/dashboard/student/profile", icon: User },
+       
         { label: "Timetable", href: "/dashboard/student/timetable", icon: Calendar },
-        {label: "Notifications", href: "/dashboard/student/notifications", icon: Bell},
+        { label: "Notifications", href: "/dashboard/student/notifications", icon: Bell },
         { label: "My Classes", href: "/dashboard/student/my-classes", icon: School },
         { label: "Attendance", href: "/dashboard/student/attendance", icon: CheckSquare },
-        { label: "Grades", href: "/dashboard/student/results", icon: BarChart }, 
+        { label: "Grades", href: "/dashboard/student/results", icon: BarChart },
         { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
+        { label: "Documents", href: "/dashboard/student/documents", icon: FileText },
       ],
     },
-    
   ],
 }
 

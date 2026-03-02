@@ -2,9 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { academicsAPI, attendanceAPI, usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { Search, CheckCircle, XCircle, Clock, UserCheck, Users, Calendar, BookOpen, Loader2, Save } from "lucide-react"
 
 export function AttendanceTracker() {
   const { user } = useAuthContext()
@@ -15,15 +18,17 @@ export function AttendanceTracker() {
   const [subjects, setSubjects] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [studentNames, setStudentNames] = useState<Record<number, string>>({})
+  const [studentAvatars, setStudentAvatars] = useState<Record<number, string>>({})
   const [attendance, setAttendance] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         setLoading(true)
-        const res = await academicsAPI.classes()
+        const res = await academicsAPI.get("/classes/")
         setClasses(res.data.results || res.data || [])
       } catch (error) {
         console.error("Failed to fetch classes:", error)
@@ -41,10 +46,11 @@ export function AttendanceTracker() {
         return
       }
       try {
-        const res = await academicsAPI.classSubjects({ class_obj: selectedClass })
-        const subjectIds = (res.data.results || res.data).map((cs: any) => cs.subject)
+        const res = await academicsAPI.get("/class-subjects/", { class_obj: selectedClass })
+        const classSubjects = res.data.results || res.data || []
+        const subjectIds = classSubjects.map((cs: any) => cs.subject)
 
-        const subjectsRes = await academicsAPI.subjects({ id__in: subjectIds.join(",") })
+        const subjectsRes = await academicsAPI.get("/subjects/", { id__in: subjectIds.join(",") })
         setSubjects(subjectsRes.data.results || subjectsRes.data)
       } catch (error) {
         console.error("Failed to fetch subjects:", error)
@@ -60,7 +66,7 @@ export function AttendanceTracker() {
         return
       }
       try {
-        const res = await academicsAPI.enrollments({ class_obj: selectedClass })
+        const res = await academicsAPI.get("/enrollments/", { class_obj: selectedClass })
         const enrollments = res.data.results || res.data
         setStudents(enrollments)
 
@@ -71,18 +77,31 @@ export function AttendanceTracker() {
         })
         setAttendance(newAttendance)
 
-        // Fetch student names
+        // Fetch student names and avatars
         const newStudentNames: Record<number, string> = {}
+        const newStudentAvatars: Record<number, string> = {}
         for (const enrollment of enrollments) {
           try {
             const userRes = await usersAPI.getById(enrollment.student)
-            newStudentNames[enrollment.student] = `${userRes.data.first_name} ${userRes.data.last_name}`
+            const userData = userRes.data
+            newStudentNames[enrollment.student] = `${userData.first_name} ${userData.last_name}`
+            // Try to get profile picture
+            try {
+              const picRes = await academicsAPI.get("/profile-pictures/", { user: enrollment.student })
+              const pics = picRes.data.results || picRes.data || []
+              if (pics.length > 0) {
+                newStudentAvatars[enrollment.student] = pics[0].display_url || pics[0].storage_url || pics[0].picture || ''
+              }
+            } catch {
+              // No profile picture
+            }
           } catch (error) {
             console.error(`Failed to fetch student name for ID ${enrollment.student}:`, error)
             newStudentNames[enrollment.student] = `Student ${enrollment.student}`
           }
         }
         setStudentNames(newStudentNames)
+        setStudentAvatars(newStudentAvatars)
       } catch (error) {
         console.error("Failed to fetch students:", error)
       }
@@ -120,74 +139,207 @@ export function AttendanceTracker() {
     }
   }
 
-  if (loading) return <div className="text-center py-4">Loading classes...</div>
+  const markAllPresent = () => {
+    const newAttendance: Record<number, string> = {}
+    students.forEach((enrollment: any) => {
+      newAttendance[enrollment.student] = "present"
+    })
+    setAttendance(newAttendance)
+  }
+
+  const markAllAbsent = () => {
+    const newAttendance: Record<number, string> = {}
+    students.forEach((enrollment: any) => {
+      newAttendance[enrollment.student] = "absent"
+    })
+    setAttendance(newAttendance)
+  }
+
+  const filteredStudents = students.filter((enrollment: any) => {
+    const name = studentNames[enrollment.student] || ""
+    return name.toLowerCase().includes(searchTerm.toLowerCase())
+  })
+
+  const getStatusCounts = () => {
+    const counts = { present: 0, absent: 0, late: 0, excused: 0 }
+    students.forEach((enrollment: any) => {
+      const status = attendance[enrollment.student] || "present"
+      counts[status as keyof typeof counts]++
+    })
+    return counts
+  }
+
+  const statusCounts = getStatusCounts()
+
+  if (loading) return (
+    <Card className="w-full">
+      <CardContent className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <span className="ml-3 text-gray-500">Loading classes...</span>
+      </CardContent>
+    </Card>
+  )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mark Attendance</CardTitle>
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <UserCheck className="h-5 w-5 text-purple-600" />
+          Mark Attendance
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Selection Controls */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Select Class</label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-3 py-2 border border-input rounded"
-            >
-              <option value="">Choose a class</option>
-              {classes.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Select Class</Label>
+            <div className="relative">
+              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+              >
+                <option value="">Choose a class</option>
+                {classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Select Subject</label>
-            <select
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-              className="w-full px-3 py-2 border border-input rounded"
-              disabled={!selectedClass}
-            >
-              <option value="">Choose a subject</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Select Subject</Label>
+            <div className="relative">
+              <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white disabled:opacity-50"
+                disabled={!selectedClass}
+              >
+                <option value="">Choose a subject</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-3 py-2 border border-input rounded"
-            />
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Date</Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
 
         {selectedClass && students.length > 0 && (
           <>
-            <div className="space-y-2">
-              {students.map((student: any) => (
-                <div key={student.id} className="flex items-center justify-between p-3 border rounded">
-                  <span>{studentNames[student.student] || `Student ${student.student}`}</span>
+            {/* Quick Actions & Search */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-gray-50 p-4 rounded-lg">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={markAllPresent}
+                  className="gap-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                >
+                  <CheckCircle className="h-4 w-4" />All Present
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={markAllAbsent}
+                  className="gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                >
+                  <XCircle className="h-4 w-4" />All Absent
+                </Button>
+              </div>
+              
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search students..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Status Summary */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <CheckCircle className="h-5 w-5 mx-auto text-green-600 mb-1" />
+                <p className="text-lg font-bold text-green-700">{statusCounts.present}</p>
+                <p className="text-xs text-green-600">Present</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-3 text-center">
+                <XCircle className="h-5 w-5 mx-auto text-red-600 mb-1" />
+                <p className="text-lg font-bold text-red-700">{statusCounts.absent}</p>
+                <p className="text-xs text-red-600">Absent</p>
+              </div>
+              <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                <Clock className="h-5 w-5 mx-auto text-yellow-600 mb-1" />
+                <p className="text-lg font-bold text-yellow-700">{statusCounts.late}</p>
+                <p className="text-xs text-yellow-600">Late</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <UserCheck className="h-5 w-5 mx-auto text-gray-600 mb-1" />
+                <p className="text-lg font-bold text-gray-700">{students.length}</p>
+                <p className="text-xs text-gray-600">Total</p>
+              </div>
+            </div>
+
+            {/* Students List */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredStudents.map((enrollment: any) => (
+                <div 
+                  key={enrollment.id} 
+                  className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:shadow-sm transition-shadow bg-white"
+                >
+                  <div className="flex items-center gap-3">
+                    {studentAvatars[enrollment.student] ? (
+                      <img 
+                        src={studentAvatars[enrollment.student]} 
+                        alt={studentNames[enrollment.student]}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center text-white font-medium">
+                        {(studentNames[enrollment.student] || "S").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="font-medium text-gray-900">
+                      {studentNames[enrollment.student] || `Student ${enrollment.student}`}
+                    </span>
+                  </div>
                   <select
-                    value={attendance[student.student] || "present"}
+                    value={attendance[enrollment.student] || "present"}
                     onChange={(e) =>
                       setAttendance({
                         ...attendance,
-                        [student.student]: e.target.value,
+                        [enrollment.student]: e.target.value,
                       })
                     }
-                    className="px-2 py-1 border border-input rounded text-sm"
+                    className={`px-3 py-1.5 border rounded-lg text-sm font-medium focus:ring-2 focus:ring-purple-500 ${
+                      attendance[enrollment.student] === 'present' ? 'bg-green-50 border-green-200 text-green-700' :
+                      attendance[enrollment.student] === 'absent' ? 'bg-red-50 border-red-200 text-red-700' :
+                      attendance[enrollment.student] === 'late' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                      'bg-gray-50 border-gray-200 text-gray-700'
+                    }`}
                   >
                     <option value="present">Present</option>
                     <option value="absent">Absent</option>
@@ -196,14 +348,41 @@ export function AttendanceTracker() {
                   </select>
                 </div>
               ))}
+              {filteredStudents.length === 0 && searchTerm && (
+                <p className="text-center text-gray-500 py-4">No students found matching "{searchTerm}"</p>
+              )}
             </div>
 
-            <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-              {submitting ? "Submitting..." : "Submit Attendance"}
+            {/* Submit Button */}
+            <Button 
+              onClick={handleSubmit} 
+              disabled={submitting} 
+              className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2.5"
+              size="lg"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Submit Attendance
+                </>
+              )}
             </Button>
           </>
+        )}
+
+        {selectedClass && students.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p>No students enrolled in this class</p>
+          </div>
         )}
       </CardContent>
     </Card>
   )
 }
+

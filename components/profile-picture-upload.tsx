@@ -66,15 +66,10 @@ export default function ProfilePictureUpload({
       formData.append("user", userId.toString())
       formData.append("picture", fileInputRef.current.files[0])
 
-      // Check if user already has a picture
-      const existing = await academicsAPI.profilePictures()
-      const userPicture = (existing.data.results || []).find((p: any) => p.user === userId)
-
-      if (userPicture) {
-        await academicsAPI.updateProfilePicture(userPicture.id, formData)
-      } else {
-        await academicsAPI.createProfilePicture(formData)
-      }
+      // The backend create endpoint handles upsert automatically:
+      // if the user already has a picture it updates it in-place,
+      // otherwise it creates a new record. No need to fetch first.
+      await academicsAPI.createProfilePicture(formData)
 
       setIsOpen(false)
       setPreview("")
@@ -91,10 +86,11 @@ export default function ProfilePictureUpload({
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete your profile picture?")) {
       try {
-        const existing = await academicsAPI.profilePictures()
-        const userPicture = (existing.data.results || []).find((p: any) => p.user === userId)
-        if (userPicture) {
-          await academicsAPI.deleteProfilePicture(userPicture.id)
+        // Fetch only this user's picture record via the ?user= filter
+        const res = await academicsAPI.profilePictureByUser(userId)
+        const pics = res.data.results || res.data || []
+        if (pics.length > 0) {
+          await academicsAPI.deleteProfilePicture(pics[0].id)
           onUploadSuccess?.()
         }
       } catch (err) {

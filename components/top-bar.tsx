@@ -1,11 +1,38 @@
 "use client"
 
 import { useAuthContext } from "@/lib/auth-context"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { academicsAPI } from "@/lib/api"
+import Image from "next/image"
 
 export function TopBar() {
   const { user, logout } = useAuthContext()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [profilePic, setProfilePic] = useState<string>("")
+
+  useEffect(() => {
+    const fetchProfilePic = async () => {
+      if (!user?.id) {
+        console.log("[TopBar] No user id available")
+        return
+      }
+      console.log("[TopBar] Fetching profile picture for user:", user.id)
+      try {
+        const picRes = await academicsAPI.profilePictureByUser(user.id)
+        console.log("[TopBar] Profile picture response:", picRes.data)
+        const pics = picRes.data.results || picRes.data || []
+        console.log("[TopBar] Profile pictures:", pics)
+        if (pics.length > 0) {
+          const picUrl = pics[0].display_url || pics[0].storage_url || pics[0].picture || ""
+          console.log("[TopBar] Setting profile pic:", picUrl)
+          setProfilePic(picUrl)
+        }
+      } catch (err) {
+        console.log("[TopBar] Error fetching profile picture:", err)
+      }
+    }
+    fetchProfilePic()
+  }, [user?.id])
 
   if (!user) return null
 
@@ -54,8 +81,12 @@ export function TopBar() {
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="flex items-center gap-3 hover:bg-[#f5f5f5] px-3 py-2 rounded-lg transition-colors"
           >
-            <div className="w-8 h-8 bg-[#ffc107] rounded-full flex items-center justify-center text-sm font-bold text-[#1a3a52]">
-              {user.first_name?.[0]}
+            <div className="w-8 h-8 bg-[#ffc107] rounded-full flex items-center justify-center text-sm font-bold text-[#1a3a52] overflow-hidden">
+              {profilePic ? (
+                <Image src={profilePic} alt="Profile" width={32} height={32} className="w-full h-full object-cover" />
+              ) : (
+                user.first_name?.[0]
+              )}
             </div>
             <div className="text-left">
               <p className="text-sm font-medium text-[#333]">
@@ -87,3 +118,4 @@ export function TopBar() {
     </header>
   )
 }
+

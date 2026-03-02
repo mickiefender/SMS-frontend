@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { useAuthContext } from "@/lib/auth-context"
-import { ChevronLeft, ChevronRight, Trash2, Edit2, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trash2, Edit2, Search, Eye } from "lucide-react"
+import { ProfileAvatar } from "@/components/profile-avatar"
 
 interface Student {
   id: number
@@ -28,6 +29,7 @@ interface Student {
   student_id?: string
   enrollment_date?: string
   is_active?: boolean
+  profile_picture_url?: string | null
 }
 
 function StudentsPageContent() {
@@ -308,7 +310,11 @@ function StudentsPageContent() {
                   <td className="px-6 py-3">
                     <Link href={`/dashboard/school-admin/students/${student.id}`}>
                       <div className="flex items-center gap-3 cursor-pointer hover:text-purple-600">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-blue-500" />
+                        <ProfileAvatar 
+                          src={student.profile_picture_url} 
+                          alt={getStudentName(student)}
+                          size="md"
+                        />
                         <span className="font-medium text-gray-900">{getStudentName(student)}</span>
                       </div>
                     </Link>
@@ -318,6 +324,11 @@ function StudentsPageContent() {
                   <td className="px-6 py-3 text-gray-700">{student.phone || "N/A"}</td>
                   <td className="px-6 py-3">
                     <div className="flex gap-2">
+                      <Link href={`/dashboard/school-admin/students/${student.id}`}>
+                        <button className="text-purple-600 hover:text-purple-700" title="View Details">
+                          <Eye size={18} />
+                        </button>
+                      </Link>
                       <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-700">
                         <Edit2 size={18} />
                       </button>

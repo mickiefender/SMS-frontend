@@ -76,12 +76,22 @@ export function GradesManagement() {
     }
   }
 
-  const getStudentName = (studentId: number) => {
+  const getStudentName = (studentId: number, grade?: any) => {
+    // First try to use student_name from API if available
+    if (grade?.student_name) {
+      return grade.student_name
+    }
+    
     const student = students.find((s) => s.id === studentId)
     return student?.user_data?.first_name || student?.first_name || `Student ${studentId}`
   }
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number, grade?: any) => {
+    // First try to use subject_name from API if available
+    if (grade?.subject_name) {
+      return grade.subject_name
+    }
+    
     const subject = subjects.find((s) => s.id === subjectId)
     return subject?.name || `Subject ${subjectId}`
   }
@@ -205,8 +215,8 @@ export function GradesManagement() {
               ) : (
                 grades.map((grade) => (
                   <tr key={grade.id} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-2">{getStudentName(grade.student)}</td>
-                    <td className="py-2 px-2">{getSubjectName(grade.subject)}</td>
+                    <td className="py-2 px-2">{getStudentName(grade.student, grade)}</td>
+                    <td className="py-2 px-2">{getSubjectName(grade.subject, grade)}</td>
                     <td className="py-2 px-2 capitalize">{grade.assessment_type}</td>
                     <td className="py-2 px-2 font-bold">{grade.percentage?.toFixed(1) || 0}%</td>
                     <td className="py-2 px-2 font-bold">{grade.grade || "N/A"}</td>
