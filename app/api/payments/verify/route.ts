@@ -13,7 +13,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const paystack = new PaystackService()
+    let paystack: PaystackService
+    try {
+      paystack = new PaystackService()
+    } catch (configError: any) {
+      console.error("Paystack configuration error:", configError.message)
+      return NextResponse.json(
+        { error: configError.message },
+        { status: 503 }
+      )
+    }
+
     const result = await paystack.verifyTransaction(reference)
 
     if (result.data.status === "success") {

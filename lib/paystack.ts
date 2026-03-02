@@ -4,15 +4,26 @@ import {
   PaymentInitData,
 } from "@/types/payment"
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
 const PAYSTACK_BASE_URL = "https://api.paystack.co"
+
+function getSecretKey(): string {
+  const key = process.env.PAYSTACK_SECRET_KEY
+  if (!key || key.includes("your_paystack_secret_key_here")) {
+    throw new Error(
+      "Paystack secret key not configured. Please set a valid PAYSTACK_SECRET_KEY in your .env.local file."
+    )
+  }
+  return key
+}
 
 export class PaystackService {
   private headers: HeadersInit
+  private secretKey: string
 
   constructor() {
+    this.secretKey = getSecretKey()
     this.headers = {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      Authorization: `Bearer ${this.secretKey}`,
       "Content-Type": "application/json",
     }
   }
@@ -125,8 +136,9 @@ export class PaystackService {
     signature: string
   ): boolean {
     const crypto = require("crypto")
+    const key = getSecretKey()
     const hash = crypto
-      .createHmac("sha512", PAYSTACK_SECRET_KEY)
+      .createHmac("sha512", key)
       .update(body)
       .digest("hex")
     return hash === signature
