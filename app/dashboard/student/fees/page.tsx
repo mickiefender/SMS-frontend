@@ -4,8 +4,11 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { billingAPI } from "@/lib/api"
+import { useAuthContext } from "@/lib/auth-context"
+import { usePayment } from "@/hooks/usePayment"
 import { DollarSign, Download } from "lucide-react"
 import Loader from '@/components/loader'
+import PaymentHistory from "@/components/payments/PaymentHistory"
 
 // Helper function to safely format currency amounts
 const formatCurrency = (amount: any): string => {
@@ -39,9 +42,12 @@ interface StudentFee {
 }
 
 export default function StudentFeesPage() {
+  const { user } = useAuthContext()
+  const { initiatePayment, loading: paymentLoading, error: paymentError } = usePayment()
   const [fees, setFees] = useState<StudentFee[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [payingFeeId, setPayingFeeId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchFees()
@@ -58,6 +64,27 @@ export default function StudentFeesPage() {
       setError("Failed to load fees")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePayFee = async (fee: StudentFee) => {
+    if (!user) return
+
+    setPayingFeeId(fee.id)
+    try {
+      await initiatePayment({
+        email: user.email,
+        amount: Number(fee.amount),
+        student_id: user.student_id || String(user.id),
+        student_name: `${user.first_name} ${user.last_name}`,
+        fee_type: fee.fee_name || fee.fee_details?.name || "School Fee",
+        academic_year: "2024/2025",
+        term: "Current Term",
+      })
+    } catch (err) {
+      console.error("Payment initiation failed:", err)
+    } finally {
+      setPayingFeeId(null)
     }
   }
 
@@ -100,6 +127,12 @@ export default function StudentFeesPage() {
         </div>
       )}
 
+      {paymentError && (
+        <div className="bg-red-100 text-red-700 p-4 rounded-lg flex justify-between items-center">
+          <span>{paymentError}</span>
+        </div>
+      )}
+
       {/* Fee Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-red-50 p-6 rounded-lg border border-red-200">
@@ -133,6 +166,7 @@ export default function StudentFeesPage() {
                   <th className="text-left py-3 px-4 font-semibold">Due Date</th>
                   <th className="text-left py-3 px-4 font-semibold">Status</th>
                   <th className="text-left py-3 px-4 font-semibold">Category</th>
+                  <th className="text-left py-3 px-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -163,12 +197,26 @@ export default function StudentFeesPage() {
                             {fee.fee_details?.fee_type || "N/A"}
                           </span>
                         </td>
+                        <td className="py-3 px-4">
+                          {!fee.paid && (
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={paymentLoading && payingFeeId === fee.id}
+                              onClick={() => handlePayFee(fee)}
+                            >
+                              {paymentLoading && payingFeeId === fee.id
+                                ? "Processing..."
+                                : "Pay Now"}
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     )
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                    <td colSpan={7} className="py-8 text-center text-gray-500">
                       No fees assigned yet
                     </td>
                   </tr>
@@ -179,13 +227,16 @@ export default function StudentFeesPage() {
         </CardContent>
       </Card>
 
+      {/* Payment History */}
+      <PaymentHistory studentId={user?.student_id || undefined} />
+
       {/* Payment Methods Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <p className="text-lg font-semibold text-blue-900 mb-2">Need to Pay?</p>
+        <p className="text-lg font-semibold text-blue-900 mb-2">Secure Payments via Paystack</p>
         <p className="text-sm text-blue-800 mb-4">
-          Contact your school admin or visit the payment portal to pay your outstanding fees online.
+          All payments are processed securely through Paystack. You can pay using Mobile Money, Bank Card, or Bank Transfer.
+          Click the &quot;Pay Now&quot; button next to any unpaid fee to make a payment.
         </p>
-        <Button className="bg-blue-600 hover:bg-blue-700">Go to Payment Portal</Button>
       </div>
     </div>
   )
