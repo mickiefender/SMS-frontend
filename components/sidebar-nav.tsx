@@ -170,14 +170,14 @@ const navSections: Record<string, NavSection[]> = {
       items: [
         { label: "Overview", href: "/dashboard/student", icon: LayoutDashboard },
         { label: "Profile", href: "/dashboard/student/profile", icon: User },
-        { label: "Fees", href: "/dashboard/student/fees", icon: DollarSignIcon },
+        { label: "Fees & Payments", href: "/dashboard/student/fees", icon: DollarSignIcon },
         { label: "Timetable", href: "/dashboard/student/timetable", icon: Calendar },
         { label: "Notifications", href: "/dashboard/student/notifications", icon: Bell },
         { label: "My Classes", href: "/dashboard/student/my-classes", icon: School },
         { label: "Attendance", href: "/dashboard/student/attendance", icon: CheckSquare },
         { label: "Grades", href: "/dashboard/student/results", icon: BarChart },
         { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
-        { label: "Fees & Payments", href: "/dashboard/student/fees", icon: DollarSignIcon },
+       
         { label: "Documents", href: "/dashboard/student/documents", icon: FileText },
       ],
     },
