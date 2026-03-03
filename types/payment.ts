@@ -95,6 +95,9 @@ export interface PaymentInitData {
   fee_type: string
   academic_year: string
   term: string
+  fee_id?: number | string
+  school_id?: string
+  school_email?: string
   callback_url?: string
 }
 

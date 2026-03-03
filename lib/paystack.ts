@@ -32,8 +32,11 @@ export class PaystackService {
         student_id: data.student_id,
         student_name: data.student_name,
         fee_type: data.fee_type,
+        fee_id: data.fee_id,
         academic_year: data.academic_year,
         term: data.term,
+        school_id: data.school_id,
+        school_email: data.school_email,
         custom_fields: [
           {
             display_name: "Student Name",

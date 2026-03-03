@@ -89,7 +89,9 @@ const navSections: Record<string, NavSection[]> = {
       icon: CreditCard,
       items: [
         { label: "Manage Types", href: "/dashboard/school-admin/manage-fees", icon: CreditCard },
-        { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard }, { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
+        { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard },
+        { label: "Withdrawals", href: "/dashboard/school-admin/withdrawals", icon: DollarSignIcon },
+        { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
         { label: "Expenses", href: "/dashboard/school-admin/expenses", icon: FileText },
       ],
       },
@@ -175,6 +177,7 @@ const navSections: Record<string, NavSection[]> = {
         { label: "Attendance", href: "/dashboard/student/attendance", icon: CheckSquare },
         { label: "Grades", href: "/dashboard/student/results", icon: BarChart },
         { label: "Assignments", href: "/dashboard/student/assignments", icon: ClipboardCheck },
+        { label: "Fees & Payments", href: "/dashboard/student/fees", icon: DollarSignIcon },
         { label: "Documents", href: "/dashboard/student/documents", icon: FileText },
       ],
     },

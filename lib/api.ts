@@ -388,9 +388,13 @@ export const assignmentAPI = {
 export const billingAPI = {
   // Fee Types Management
   fees: () => apiClient.get("/billing/fees/"),
+  feeTypes: () => apiClient.get("/billing/fees/"),
   createFee: (data: any) => apiClient.post("/billing/fees/", data),
+  createFeeType: (data: any) => apiClient.post("/billing/fees/", data),
   updateFee: (id: number, data: any) => apiClient.put(`/billing/fees/${id}/`, data),
+  updateFeeType: (id: number, data: any) => apiClient.put(`/billing/fees/${id}/`, data),
   deleteFee: (id: number) => apiClient.delete(`/billing/fees/${id}/`),
+  deleteFeeType: (id: number) => apiClient.delete(`/billing/fees/${id}/`),
   
   // School-wide Fee Assignments
   schoolFeeAssignments: () => apiClient.get("/billing/school-fee-assignments/"),

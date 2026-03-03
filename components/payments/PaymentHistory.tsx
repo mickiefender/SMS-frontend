@@ -6,27 +6,72 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface PaymentHistoryProps {
   studentId?: string
+  schoolId?: string
+  showStudentColumn?: boolean
 }
 
-export default function PaymentHistory({ studentId }: PaymentHistoryProps) {
+export default function PaymentHistory({ studentId, schoolId, showStudentColumn = false }: PaymentHistoryProps) {
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>("all")
 
   useEffect(() => {
     fetchPayments()
-  }, [studentId, filter])
+  }, [studentId, schoolId, filter])
 
   const fetchPayments = async () => {
     setLoading(true)
     try {
+      // Fetch from API
       const params = new URLSearchParams()
       if (studentId) params.set("student_id", studentId)
+      if (schoolId) params.set("school_id", schoolId)
       if (filter !== "all") params.set("status", filter)
 
       const response = await fetch(`/api/payments/history?${params.toString()}`)
       const data = await response.json()
-      setPayments(data.payments || [])
+      let apiPayments = data.payments || []
+
+      // Also merge with localStorage payments for the student
+      if (studentId && typeof window !== "undefined") {
+        try {
+          const historyKey = `payment_history_${studentId}`
+          const localPayments = JSON.parse(localStorage.getItem(historyKey) || "[]")
+          const apiRefs = new Set(apiPayments.map((p: any) => p.reference))
+
+          const mergedLocal = localPayments
+            .filter((lp: any) => !apiRefs.has(lp.reference))
+            .map((lp: any, idx: number) => ({
+              id: `local_${idx}`,
+              student_id: studentId,
+              student_name: "",
+              email: "",
+              amount: lp.amount || 0,
+              fee_type: lp.fee_type || "Payment",
+              reference: lp.reference || "",
+              status: lp.status || "success",
+              payment_channel: lp.channel || "",
+              paid_at: lp.paid_at || "",
+              created_at: lp.paid_at || new Date().toISOString(),
+              updated_at: lp.paid_at || new Date().toISOString(),
+              academic_year: "",
+              term: "",
+            }))
+
+          apiPayments = [...apiPayments, ...mergedLocal]
+        } catch {
+          // ignore
+        }
+      }
+
+      // Sort by date descending
+      apiPayments.sort((a: any, b: any) => new Date(b.created_at || b.paid_at).getTime() - new Date(a.created_at || a.paid_at).getTime())
+
+      if (filter !== "all") {
+        apiPayments = apiPayments.filter((p: any) => p.status === filter)
+      }
+
+      setPayments(apiPayments)
     } catch (error) {
       console.error("Failed to fetch payments:", error)
     } finally {
@@ -86,8 +131,12 @@ export default function PaymentHistory({ studentId }: PaymentHistoryProps) {
                 <tr className="border-b bg-gray-50">
                   <th className="text-left py-3 px-4 font-semibold">Date</th>
                   <th className="text-left py-3 px-4 font-semibold">Reference</th>
+                  {showStudentColumn && (
+                    <th className="text-left py-3 px-4 font-semibold">Student</th>
+                  )}
                   <th className="text-left py-3 px-4 font-semibold">Fee Type</th>
                   <th className="text-left py-3 px-4 font-semibold">Amount</th>
+                  <th className="text-left py-3 px-4 font-semibold">Channel</th>
                   <th className="text-left py-3 px-4 font-semibold">Status</th>
                 </tr>
               </thead>
@@ -95,16 +144,24 @@ export default function PaymentHistory({ studentId }: PaymentHistoryProps) {
                 {payments.map((payment) => (
                   <tr key={payment.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-600">
-                      {new Date(payment.created_at).toLocaleDateString()}
+                      {new Date(payment.paid_at || payment.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 font-mono text-gray-800 text-xs">
                       {payment.reference}
                     </td>
+                    {showStudentColumn && (
+                      <td className="py-3 px-4 text-gray-600">
+                        {payment.student_name || "N/A"}
+                      </td>
+                    )}
                     <td className="py-3 px-4 text-gray-600">
                       {payment.fee_type}
                     </td>
                     <td className="py-3 px-4 font-medium text-gray-800">
-                      GH¢{payment.amount.toFixed(2)}
+                      GH¢{Number(payment.amount).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 capitalize">
+                      {payment.payment_channel || "—"}
                     </td>
                     <td className="py-3 px-4">
                       {getStatusBadge(payment.status)}

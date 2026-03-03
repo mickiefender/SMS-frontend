@@ -4,18 +4,17 @@ import type React from "react"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { TopBar } from "@/components/top-bar"
 import { ProtectedRoute } from "@/lib/protected-route"
+import { NotificationProvider } from "@/lib/notifications-context"
+import { useAuthContext } from "@/lib/auth-context"
 import { useState } from "react"
 import { Menu } from "lucide-react"
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <ProtectedRoute>
+    <NotificationProvider userId={user?.id}>
       <div className="flex h-screen bg-background">
         {/* Sidebar - collapsible on mobile, always visible on desktop */}
         <div className="hidden lg:block w-64">
@@ -45,6 +44,18 @@ export default function DashboardLayout({
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
       </div>
+    </NotificationProvider>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <ProtectedRoute>
+      <DashboardContent>{children}</DashboardContent>
     </ProtectedRoute>
   )
 }
