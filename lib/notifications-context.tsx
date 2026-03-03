@@ -31,16 +31,78 @@ function getStorageKey(userId?: number | string): string {
 export function NotificationProvider({ children, userId }: { children: React.ReactNode; userId?: number | string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
+  // Load notifications from user's store and merge school payment notifications for admins
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
       const stored = localStorage.getItem(getStorageKey(userId))
-      if (stored) {
-        setNotifications(JSON.parse(stored))
+      let userNotifs: Notification[] = stored ? JSON.parse(stored) : []
+
+      // For school admins, also load school-level payment notifications
+      const userStr = sessionStorage.getItem("user")
+      if (userStr) {
+        try {
+          const userData = JSON.parse(userStr)
+          if (userData.role === "school_admin") {
+            const schoolId = userData.school_id || "default"
+            const schoolNotifKey = `school_payment_notifications_${schoolId}`
+            const schoolNotifs: Notification[] = JSON.parse(localStorage.getItem(schoolNotifKey) || "[]")
+
+            // Merge school notifications that aren't already in user's notifications
+            const existingIds = new Set(userNotifs.map((n) => n.id))
+            const newSchoolNotifs = schoolNotifs.filter((n) => !existingIds.has(n.id))
+            if (newSchoolNotifs.length > 0) {
+              userNotifs = [...newSchoolNotifs, ...userNotifs]
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 50)
+            }
+          }
+        } catch {
+          // ignore
+        }
       }
+
+      setNotifications(userNotifs)
     } catch {
       // ignore parse errors
     }
+  }, [userId])
+
+  // Poll for new school payment notifications (for school admins)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const userStr = sessionStorage.getItem("user")
+    if (!userStr) return
+
+    let userData: any
+    try {
+      userData = JSON.parse(userStr)
+    } catch {
+      return
+    }
+
+    if (userData.role !== "school_admin") return
+
+    const schoolId = userData.school_id || "default"
+    const schoolNotifKey = `school_payment_notifications_${schoolId}`
+
+    const pollInterval = setInterval(() => {
+      try {
+        const schoolNotifs: Notification[] = JSON.parse(localStorage.getItem(schoolNotifKey) || "[]")
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id))
+          const newNotifs = schoolNotifs.filter((n) => !existingIds.has(n.id))
+          if (newNotifs.length === 0) return prev
+          return [...newNotifs, ...prev]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 50)
+        })
+      } catch {
+        // ignore
+      }
+    }, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(pollInterval)
   }, [userId])
 
   useEffect(() => {
