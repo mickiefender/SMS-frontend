@@ -4,27 +4,36 @@ import {
   PaymentInitData,
 } from "@/types/payment"
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
-const PAYSTACK_BASE_URL = "https://api.paystack.co"
+const PAYSTACK_BASE_URL =
+  process.env.PAYSTACK_BASE_URL || "https://api.paystack.co"
 
 export class PaystackService {
   private headers: HeadersInit
 
   constructor() {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY
+
+    if (!secretKey) {
+      throw new Error("PAYSTACK_SECRET_KEY is not defined in environment")
+    }
+
     this.headers = {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      Authorization: `Bearer ${secretKey}`,
       "Content-Type": "application/json",
     }
   }
 
+  // ✅ Initialize payment
   async initializeTransaction(
     data: PaymentInitData
   ): Promise<PaystackInitializeResponse> {
+    const reference = `SCH-${Date.now()}-${crypto.randomUUID()}`
+
     const payload = {
       email: data.email,
-      amount: data.amount * 100, // Convert to pesewas
-      currency: "GHS", // Ghana Cedis
-      reference: `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      amount: Math.round(data.amount * 100), // convert to pesewas safely
+      currency: "GHS",
+      reference,
       callback_url:
         data.callback_url ||
         `${process.env.NEXT_PUBLIC_APP_URL}/payment/verify`,
@@ -62,37 +71,70 @@ export class PaystackService {
       },
     }
 
-    const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify(payload),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "Failed to initialize transaction")
-    }
+    try {
+      const response = await fetch(
+        `${PAYSTACK_BASE_URL}/transaction/initialize`,
+        {
+          method: "POST",
+          headers: this.headers,
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        }
+      )
 
-    return response.json()
-  }
+      const result = await response.json()
 
-  async verifyTransaction(reference: string): Promise<PaystackVerifyResponse> {
-    const response = await fetch(
-      `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
-      {
-        method: "GET",
-        headers: this.headers,
+      if (!response.ok) {
+        throw new Error(
+          result?.message || "Failed to initialize transaction"
+        )
       }
-    )
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "Failed to verify transaction")
+      return result
+    } catch (error: any) {
+      console.error("Paystack initialize error:", error)
+      throw error
+    } finally {
+      clearTimeout(timeout)
     }
-
-    return response.json()
   }
 
+  // ✅ Verify payment
+  async verifyTransaction(
+    reference: string
+  ): Promise<PaystackVerifyResponse> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    try {
+      const response = await fetch(
+        `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
+        {
+          method: "GET",
+          headers: this.headers,
+          signal: controller.signal,
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.message || "Failed to verify transaction")
+      }
+
+      return result
+    } catch (error: any) {
+      console.error("Paystack verify error:", error)
+      throw error
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  // ✅ List transactions
   async listTransactions(params?: {
     perPage?: number
     page?: number
@@ -101,37 +143,59 @@ export class PaystackService {
     to?: string
   }) {
     const searchParams = new URLSearchParams()
+
     if (params?.perPage) searchParams.set("perPage", params.perPage.toString())
     if (params?.page) searchParams.set("page", params.page.toString())
     if (params?.status) searchParams.set("status", params.status)
     if (params?.from) searchParams.set("from", params.from)
     if (params?.to) searchParams.set("to", params.to)
 
-    const response = await fetch(
-      `${PAYSTACK_BASE_URL}/transaction?${searchParams.toString()}`,
-      {
-        method: "GET",
-        headers: this.headers,
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    try {
+      const response = await fetch(
+        `${PAYSTACK_BASE_URL}/transaction?${searchParams.toString()}`,
+        {
+          method: "GET",
+          headers: this.headers,
+          signal: controller.signal,
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.message || "Failed to list transactions")
       }
-    )
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "Failed to list transactions")
+      return result
+    } catch (error: any) {
+      console.error("Paystack list error:", error)
+      throw error
+    } finally {
+      clearTimeout(timeout)
     }
-
-    return response.json()
   }
 
+  // ✅ Webhook signature validation
   static validateWebhookSignature(
     body: string,
     signature: string
   ): boolean {
     const crypto = require("crypto")
+    const secretKey = process.env.PAYSTACK_SECRET_KEY
+
+    if (!secretKey) {
+      console.error("Missing PAYSTACK_SECRET_KEY for webhook validation")
+      return false
+    }
+
     const hash = crypto
-      .createHmac("sha512", PAYSTACK_SECRET_KEY)
+      .createHmac("sha512", secretKey)
       .update(body)
       .digest("hex")
+
     return hash === signature
   }
 }
