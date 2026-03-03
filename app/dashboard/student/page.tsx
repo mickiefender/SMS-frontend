@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { academicsAPI, authAPI, assignmentAPI, billingAPI, gradesAPI, attendanceAPI } from "@/lib/api"
+import { academicsAPI, authAPI, assignmentAPI, billingAPI, gradesAPI, attendanceAPI, usersAPI } from "@/lib/api"
 import { BookOpen, DollarSign, Calendar, FileText, Edit2, Download, Share2, ClipboardList, UserCheck } from "lucide-react"
 import Image from "next/image"
 import Loader from '@/components/loader'
@@ -27,6 +27,8 @@ export default function StudentDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [profilePic, setProfilePic] = useState<string>("")
+  const [studentProfile, setStudentProfile] = useState<any>(null)
+  const [studentClass, setStudentClass] = useState<any>(null)
   const [assignments, setAssignments] = useState<any[]>([])
   const [grades, setGrades] = useState<any[]>([])
   const [attendance, setAttendance] = useState<any>(null)
@@ -81,11 +83,40 @@ export default function StudentDashboard() {
         try {
           const picRes = await academicsAPI.profilePictures()
           if (picRes.data.results?.length > 0) {
-            // Get the best available URL - prefer display_url, fall back to storage_url or picture
             setProfilePic(picRes.data.results[0].display_url || picRes.data.results[0].storage_url || picRes.data.results[0].picture || "")
           }
         } catch (err) {
           console.log("No profile picture yet")
+        }
+
+        // Fetch full student profile data
+        try {
+          const studentsRes = await usersAPI.students()
+          const allStudents = studentsRes.data.results || studentsRes.data || []
+          const userId = user.data.id
+          const myProfile = allStudents.find((s: any) => 
+            s.user === userId || s.user?.id === userId || s.user_data?.id === userId || s.id === userId
+          )
+          if (myProfile) {
+            setStudentProfile(myProfile)
+          }
+        } catch (err) {
+          console.log("Could not fetch student profile details")
+        }
+
+        // Fetch student class enrollment
+        try {
+          const classesRes = await academicsAPI.studentClasses()
+          const allEnrollments = classesRes.data.results || classesRes.data || []
+          const userId = user.data.id
+          const myClass = allEnrollments.find((e: any) => 
+            e.student === userId || e.student?.id === userId || e.student_data?.id === userId
+          )
+          if (myClass) {
+            setStudentClass(myClass)
+          }
+        } catch (err) {
+          console.log("Could not fetch class enrollment data")
         }
 
         // Fetch attendance data
@@ -235,7 +266,7 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Profile Picture */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-3">
                   <div className="w-32 h-32 bg-cyan-400 rounded-lg flex items-center justify-center overflow-hidden">
                     {profilePic ? (
                       <Image src={profilePic || "/placeholder.svg"} alt="Profile" width={128} height={128} className="w-full h-full object-cover" />
@@ -244,6 +275,10 @@ export default function StudentDashboard() {
                         <p className="text-sm">No Picture</p>
                       </div>
                     )}
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold">{data?.userProfile?.first_name} {data?.userProfile?.last_name}</p>
+                    <p className="text-xs text-gray-500">ID: {studentProfile?.student_id || data?.userProfile?.student_id || data?.userProfile?.username || "-"}</p>
                   </div>
                 </div>
 
@@ -256,23 +291,27 @@ export default function StudentDashboard() {
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Gender :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentProfile?.gender || data?.userProfile?.gender || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Father Name :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentProfile?.father_name || data?.userProfile?.father_name || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Mother Name :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentProfile?.mother_name || data?.userProfile?.mother_name || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Date Of Birth :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">
+                        {studentProfile?.date_of_birth || data?.userProfile?.date_of_birth
+                          ? new Date(studentProfile?.date_of_birth || data?.userProfile?.date_of_birth).toLocaleDateString()
+                          : "-"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Religion :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentProfile?.religion || data?.userProfile?.religion || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">E-mail :</p>
@@ -280,23 +319,27 @@ export default function StudentDashboard() {
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Class :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentClass?.class_name || studentClass?.class_obj_name || studentProfile?.class_name || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Roll :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentClass?.roll_number || studentProfile?.roll_number || studentProfile?.student_id || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Section :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentClass?.section || studentProfile?.section || "-"}</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-gray-500 text-sm">Address :</p>
-                      <p className="font-semibold">-</p>
+                      <p className="font-semibold">{studentProfile?.address || data?.userProfile?.address || "-"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-sm">Phone :</p>
-                      <p className="font-semibold">{data?.userProfile?.phone || "-"}</p>
+                      <p className="font-semibold">{data?.userProfile?.phone || studentProfile?.phone || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-sm">Student ID :</p>
+                      <p className="font-semibold">{studentProfile?.student_id || data?.userProfile?.student_id || "-"}</p>
                     </div>
                   </div>
                 </div>

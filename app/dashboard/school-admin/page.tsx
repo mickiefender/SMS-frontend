@@ -9,6 +9,7 @@ import { ClassPerformanceAnalytics } from "@/components/class-performance-analyt
 import { EventCalendar } from "@/components/event-calendar"
 import { NoticeBoard } from "@/components/notice-board"
 import { RecentActivities } from "@/components/recent-activities"
+import { RecentPayments } from "@/components/recent-payments"
 import { StudentsManagement } from "@/components/students-management"
 import { TeachersManagement } from "@/components/teachers-management"
 import { SchoolProfileSetup } from "@/components/school-profile-setup"
@@ -34,11 +35,23 @@ export default function SchoolAdminPage() {
       try {
         const [studentsRes, teachersRes] = await Promise.all([usersAPI.students(), usersAPI.teachers()])
 
+        // Fetch real revenue data
+        let totalRevenue = 7500000
+        try {
+          const revenueRes = await fetch(`/api/revenue?school_id=${studentsRes?.data?.results?.[0]?.school || "default"}`)
+          const revenueData = await revenueRes.json()
+          if (revenueData.status && revenueData.data?.total_revenue > 0) {
+            totalRevenue = revenueData.data.total_revenue
+          }
+        } catch {
+          // Use default if revenue API fails
+        }
+
         setStats({
           students: studentsRes?.data?.results?.length || 0,
           teachers: teachersRes?.data?.results?.length || 0,
           parents: 0,
-          earnings: 7500000, // Changed to GHS (Ghanaian Cedis)
+          earnings: totalRevenue,
           loading: false,
         })
       } catch (error) {
@@ -76,9 +89,14 @@ export default function SchoolAdminPage() {
                 </div>
               </div>
 
-              {/* Class Performance Analytics - Full Width */}
-              <div className="w-full">
-                <ClassPerformanceAnalytics />
+              {/* Recent Payments & Class Performance */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <RecentPayments />
+                </div>
+                <div>
+                  <ClassPerformanceAnalytics />
+                </div>
               </div>
 
               {/* Recent Activities */}

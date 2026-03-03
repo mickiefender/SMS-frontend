@@ -59,6 +59,14 @@ export default function StudentFeesPage() {
 
   useEffect(() => {
     fetchFees()
+    // Re-fetch fees when the page becomes visible (e.g., returning from payment)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchFees()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
   }, [])
 
   const fetchFees = async () => {

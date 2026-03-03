@@ -54,8 +54,14 @@ export default function PaymentVerification() {
           metadata: { reference, amount: result.data.amount },
         })
 
+        // Add in-app notification for the school admin
+        broadcastSchoolAdminPaymentNotification(result.data, reference)
+
         // Update local fee payment tracking
         updateLocalFeePayment(result.data)
+
+        // Mark fee as paid in the backend billing system
+        await markFeeAsPaidInBackend(result.data)
       } else {
         setPaymentStatus("failed")
         setPaymentData(result.data)
@@ -139,6 +145,76 @@ export default function PaymentVerification() {
       })
     } catch (err) {
       console.error("Failed to send school notification email:", err)
+    }
+  }
+
+  const markFeeAsPaidInBackend = async (data: any) => {
+    try {
+      const feeId = data.metadata?.fee_id
+      if (feeId) {
+        // Try to mark the fee as paid via the billing API
+        const token = typeof window !== "undefined" ? sessionStorage.getItem("authToken") : null
+        if (token) {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/billing/student-fee-assignments/${feeId}/mark_paid/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+          })
+        }
+      }
+    } catch (err) {
+      console.error("Failed to mark fee as paid in backend:", err)
+    }
+  }
+
+  const broadcastSchoolAdminPaymentNotification = (data: any, reference: string) => {
+    if (typeof window === "undefined") return
+    try {
+      // Store a payment notification that school admins can pick up
+      // We use a shared key pattern that the school admin dashboard polls
+      const schoolId = data.metadata?.school_id || "default"
+      const notifKey = `school_payment_notifications_${schoolId}`
+      const existing = JSON.parse(localStorage.getItem(notifKey) || "[]")
+      const newNotification = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: "payment",
+        title: "Fee Payment Received",
+        message: `${data.metadata?.student_name || data.customer?.first_name || "A student"} paid GH¢${data.amount?.toFixed(2)} for ${data.metadata?.fee_type || "fees"}. Reference: ${reference}`,
+        read: false,
+        created_at: new Date().toISOString(),
+        metadata: {
+          reference,
+          amount: data.amount,
+          student_name: data.metadata?.student_name || data.customer?.first_name,
+          fee_type: data.metadata?.fee_type,
+          channel: data.channel,
+        },
+      }
+      existing.unshift(newNotification)
+      localStorage.setItem(notifKey, JSON.stringify(existing.slice(0, 100)))
+
+      // Also inject into any school admin's notification store
+      // Find all notification keys for school admin users and add the notification
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith("notifications_") && !key.startsWith("notifications_guest")) {
+          try {
+            const userNotifs = JSON.parse(localStorage.getItem(key) || "[]")
+            // Check if this user already has this notification (by reference)
+            const alreadyExists = userNotifs.some((n: any) => n.metadata?.reference === reference && n.type === "payment" && n.title === "Fee Payment Received")
+            if (!alreadyExists) {
+              userNotifs.unshift(newNotification)
+              localStorage.setItem(key, JSON.stringify(userNotifs.slice(0, 50)))
+            }
+          } catch {
+            // skip invalid entries
+          }
+        }
+      }
+    } catch {
+      // ignore storage errors
     }
   }
 
