@@ -16,6 +16,8 @@ import { SchoolProfileSetup } from "@/components/school-profile-setup"
 import { AcademicStructure } from "@/components/academic-structure"
 import { TimetableManagement } from "@/components/timetable-management"
 import { GradingSystem } from "@/components/grading-system"
+import { GenderDistributionChart } from "@/components/gender-distribution-chart"
+import { BestPerformingClass } from "@/components/best-performing-class"
 import LoadingWrapper from "@/components/loading-wrapper"
 
 
@@ -89,10 +91,19 @@ export default function SchoolAdminPage() {
                 </div>
               </div>
 
-              {/* Recent Payments & Class Performance */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="lg:col-span-2">
+                  <RecentPayments />
+                </div>
+                <div>
+                  <BestPerformingClass />
+                </div>
+              </div>
+
+              {/* Gender Distribution and Class Performance */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 <div>
-                  <RecentPayments />
+                  <GenderDistributionChart />
                 </div>
                 <div>
                   <ClassPerformanceAnalytics />
