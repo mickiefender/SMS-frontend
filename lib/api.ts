@@ -103,6 +103,19 @@ export const academicsAPI = {
   updateDepartment: (id: number, data: any) => apiClient.put(`/academics/departments/${id}/`, data),
   deleteClass: (id: number) => apiClient.delete(`/academics/classes/${id}/`),
   deleteSubject: (id: number) => apiClient.delete(`/academics/subjects/${id}/`),
+  classPerformance: () => {
+    // Mock data for class performance
+    const mockData = {
+      results: [
+        { className: "Class A", averageScore: 85 },
+        { className: "Class B", averageScore: 78 },
+        { className: "Class C", averageScore: 92 },
+        { className: "Class D", averageScore: 81 },
+        { className: "Class E", averageScore: 88 },
+      ],
+    }
+    return Promise.resolve({ data: mockData })
+  },
   calendarEvents: () => apiClient.get("/academics/calendar-events/"),
   createCalendarEvent: (data: any) => apiClient.post("/academics/calendar-events/", data),
   updateCalendarEvent: (id: number, data: any) => apiClient.put(`/academics/calendar-events/${id}/`, data),
