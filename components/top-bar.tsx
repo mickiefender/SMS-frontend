@@ -7,13 +7,17 @@ import { academicsAPI } from "@/lib/api"
 import Image from "next/image"
 
 export function TopBar() {
-  const { user, logout } = useAuthContext()
+  const { user, logout, school } = useAuthContext()
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [profilePic, setProfilePic] = useState<string>("")
   const notifRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  // Get school logo URL
+  const schoolLogoUrl = school?.logo_url || school?.logo_url_computed
+  const schoolInitial = school?.name?.charAt(0) || "S"
 
   useEffect(() => {
     const fetchProfilePic = async () => {
@@ -82,8 +86,19 @@ export function TopBar() {
 
   return (
     <header className="border-b border-[#e0e0e0] bg-white h-16 flex items-center justify-between px-8 sticky top-0 z-40">
-      {/* Left side - Welcome text */}
-      <h2 className="text-lg text-[#666] font-medium">Dashboard</h2>
+      {/* Left side - Welcome text with school logo */}
+      <div className="flex items-center gap-3">
+        {schoolLogoUrl && (
+          <div className="w-8 h-8 rounded overflow-hidden bg-white border border-gray-200">
+            <img 
+              src={schoolLogoUrl} 
+              alt={school?.name || "School"} 
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
+        <h2 className="text-lg text-[#666] font-medium">Dashboard</h2>
+      </div>
 
       {/* Right side - Search, language, notifications, profile */}
       <div className="flex items-center gap-6">

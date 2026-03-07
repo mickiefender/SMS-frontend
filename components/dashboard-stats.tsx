@@ -1,6 +1,7 @@
 "use client"
 
 import { Users, UserCheck, Users2, DollarSign } from "lucide-react"
+import { CircularLoader } from "@/components/circular-loader"
 
 interface DashboardStatsProps {
   stats: {
@@ -36,7 +37,9 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
               <Icon className={`${stat.textColor}`} size={24} />
             </div>
             <p className="text-gray-600 text-sm mb-2">{stat.label}</p>
-            <p className="text-3xl font-bold text-gray-800">{stats.loading ? "..." : stat.value}</p>
+            <p className="text-3xl font-bold text-gray-800">
+              {stats.loading ? <CircularLoader size="sm" /> : stat.value}
+            </p>
           </div>
         )
       })}

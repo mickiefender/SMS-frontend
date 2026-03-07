@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useState, useEffect } from "react"
 import { usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { CircularLoader, CardLoader } from "@/components/circular-loader"
 
 interface Teacher {
   id: number
@@ -178,7 +179,16 @@ export function TeachersManagement() {
   }
 
   if (loading) {
-    return <div className="text-center py-4">Loading teachers...</div>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Teachers Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardLoader />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

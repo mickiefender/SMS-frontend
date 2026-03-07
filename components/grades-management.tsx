@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { gradesAPI, academicsAPI, usersAPI } from "@/lib/api"
+import { CardLoader } from "@/components/circular-loader"
 
 export function GradesManagement() {
   const [grades, setGrades] = useState<any[]>([])
@@ -96,7 +97,16 @@ export function GradesManagement() {
     return subject?.name || `Subject ${subjectId}`
   }
 
-  if (loading) return <div className="text-center py-4">Loading grades...</div>
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Grades & Assessment</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardLoader />
+      </CardContent>
+    </Card>
+  )
 
   return (
     <Card>

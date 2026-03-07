@@ -6,7 +6,10 @@ import { usersAPI, academicsAPI } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ChevronLeft, Edit2, AlertCircle, BookOpen, Camera, Save, X, User, Phone, Mail, MapPin, Calendar, Briefcase, Award, MessageSquare, Download, FileText, Clock, Users } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ChevronLeft, Edit2, AlertCircle, BookOpen, Camera, Save, X, User, Phone, Mail, MapPin, Calendar, Briefcase, Award, MessageSquare, Download, FileText, Clock, Users, Trash2, Plus } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -60,6 +63,13 @@ export default function TeacherDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [classes, setClasses] = useState<any[]>([])
   const [subjects, setSubjects] = useState<any[]>([])
+  const [classesLoading, setClassesLoading] = useState(true)
+  const [subjectsLoading, setSubjectsLoading] = useState(true)
+  const [allClasses, setAllClasses] = useState<any[]>([])
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [selectedClassId, setSelectedClassId] = useState('')
+  const [isFormTutor, setIsFormTutor] = useState(false)
+  const [assigningClass, setAssigningClass] = useState(false)
 
   const [profilePic, setProfilePic] = useState('')
   const [profilePicId, setProfilePicId] = useState<number | null>(null)
@@ -97,19 +107,67 @@ export default function TeacherDetailPage() {
         try {
           const picRes = await academicsAPI.profilePictureByUser(u.id)
           const pics = picRes.data.results || picRes.data || []
-          if (pics.length > 0) { setProfilePic(pics[0].picture); setProfilePicId(pics[0].id) }
+          if (pics.length > 0) { 
+            // Get the best available URL - prefer display_url, fall back to storage_url, then picture
+            setProfilePic(pics[0].display_url || pics[0].storage_url || pics[0].picture || ''); 
+            setProfilePicId(pics[0].id) 
+          }
         } catch { /* no pic */ }
       }
+      
+      // Get the teacher user ID and profile ID for filtering
+      // The backend stores the User ID (not profile ID) in class_teachers and subject_teachers
+      const userIdNum = u?.id || null
+      const profileIdNum = t.id || null
+      
+      console.log("Loading classes/subjects for teacher - User ID:", userIdNum, "Profile ID:", profileIdNum, "Teacher ID from URL:", teacherId)
+      
       try {
-        const classRes = await academicsAPI.classTeachers()
+        setClassesLoading(true)
+        const [classRes, classesRes] = await Promise.all([
+          academicsAPI.classTeachers(),
+          academicsAPI.classes()
+        ])
+        
         const all = classRes.data.results || classRes.data || []
-        setClasses(all.filter((c: any) => c.teacher === parseInt(teacherId) || c.teacher?.id === parseInt(teacherId)))
-      } catch { /* skip */ }
+        console.log("All class teachers:", all.slice(0, 3)) // Log first 3 for debugging
+        
+        // Filter by user ID or profile ID (the backend stores user ID)
+        const teacherClasses = all.filter((c: any) => {
+          const cTeacher = c.teacher
+          const teacherIdValue = typeof cTeacher === 'object' ? cTeacher?.id : cTeacher
+          return teacherIdValue === userIdNum || teacherIdValue === profileIdNum || teacherIdValue === parseInt(teacherId)
+        })
+        console.log("Filtered teacher classes:", teacherClasses)
+        setClasses(teacherClasses)
+        
+        // Also store all available classes for assignment
+        const allClassesData = classesRes.data.results || classesRes.data || []
+        setAllClasses(allClassesData)
+      } catch (err) { 
+        console.error("Error loading classes:", err)
+        /* skip */ 
+      }
+      finally { setClassesLoading(false) }
       try {
+        setSubjectsLoading(true)
         const subRes = await academicsAPI.classSubjectTeachers()
         const all = subRes.data.results || subRes.data || []
-        setSubjects(all.filter((s: any) => s.teacher === parseInt(teacherId) || s.teacher?.id === parseInt(teacherId)))
-      } catch { /* skip */ }
+        console.log("All subject teachers:", all.slice(0, 3)) // Log first 3 for debugging
+        
+        // Filter by user ID or profile ID (the backend stores user ID)
+        const teacherSubjects = all.filter((s: any) => {
+          const sTeacher = s.teacher
+          const teacherIdValue = typeof sTeacher === 'object' ? sTeacher?.id : sTeacher
+          return teacherIdValue === userIdNum || teacherIdValue === profileIdNum || teacherIdValue === parseInt(teacherId)
+        })
+        console.log("Filtered teacher subjects:", teacherSubjects)
+        setSubjects(teacherSubjects)
+      } catch (err) { 
+        console.error("Error loading subjects:", err)
+        /* skip */ 
+      }
+      finally { setSubjectsLoading(false) }
     } catch { setError('Failed to load teacher details') }
     finally { setLoading(false) }
   }
@@ -118,6 +176,7 @@ export default function TeacherDetailPage() {
   const tEmail = () => teacher?.user_data?.email || teacher?.user?.email || 'N/A'
   const tPhone = () => teacher?.user_data?.phone || teacher?.user?.phone || 'N/A'
   const tUserId = () => teacher?.user_data?.id || teacher?.user?.id || null
+  const tProfileId = () => teacher?.id || null
 
   const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
@@ -150,6 +209,48 @@ export default function TeacherDetailPage() {
     } catch (err: any) { setError(err?.response?.data?.detail || 'Failed to save') }
     finally { setSaving(false) }
   }
+
+  const handleAssignClass = async () => {
+    if (!selectedClassId || !teacher) return
+    
+    const teacherUserId = teacher.user_data?.id || teacher.user?.id || parseInt(teacherId)
+    
+    try {
+      setAssigningClass(true)
+      await academicsAPI.createClassTeacher({
+        class_obj: parseInt(selectedClassId),
+        teacher: teacherUserId,
+        is_form_tutor: isFormTutor
+      })
+      setIsAssignDialogOpen(false)
+      setSelectedClassId('')
+      setIsFormTutor(false)
+      // Reload classes
+      loadData()
+    } catch (err: any) {
+      console.error("Error assigning class:", err)
+      setError(err?.response?.data?.detail || 'Failed to assign class')
+    } finally {
+      setAssigningClass(false)
+    }
+  }
+
+  const handleRemoveFromClass = async (classTeacherId: number) => {
+    if (!confirm("Are you sure you want to remove this teacher from the class?")) return
+    
+    try {
+      await academicsAPI.deleteClassTeacher(classTeacherId)
+      // Reload classes
+      loadData()
+    } catch (err: any) {
+      console.error("Error removing from class:", err)
+      setError(err?.response?.data?.detail || 'Failed to remove from class')
+    }
+  }
+
+  // Get assigned class IDs for filtering available classes
+  const assignedClassIds = new Set(classes.map((c: any) => c.class_obj))
+  const availableClassesForAssignment = allClasses.filter((c: any) => !assignedClassIds.has(c.id))
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-gray-600">Loading...</p></div>
   if (error || !teacher) return (
@@ -315,20 +416,96 @@ export default function TeacherDetailPage() {
 
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <BookOpen size={16} className="text-purple-600" />Classes Assigned
-            </h2>
-            {classes.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                <BookOpen size={16} className="text-purple-600" />Classes Assigned
+              </h2>
+              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    <Plus size={14} /> Assign
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Assign Teacher to Class</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                        <p className="text-sm">{error}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Select Class</Label>
+                      <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableClassesForAssignment.length > 0 ? (
+                            availableClassesForAssignment.map((cls: any) => (
+                              <SelectItem key={cls.id} value={cls.id.toString()}>
+                                {cls.name} {cls.section ? `- ${cls.section}` : ''}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-sm text-gray-500">No classes available</div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="form_tutor"
+                        checked={isFormTutor}
+                        onCheckedChange={(checked) => setIsFormTutor(checked === true)}
+                      />
+                      <Label htmlFor="form_tutor">Assign as Form Tutor (Class Manager)</Label>
+                    </div>
+                    <Button 
+                      onClick={handleAssignClass} 
+                      disabled={!selectedClassId || assigningClass}
+                      className="w-full"
+                    >
+                      {assigningClass ? 'Assigning...' : 'Assign to Class'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            {classesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              </div>
+            ) : classes.length > 0 ? (
+              <div className="space-y-2">
                 {classes.map((c: any, i: number) => (
-                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-center">
-                    <p className="font-semibold text-blue-800 text-sm">{c.class_name || c.class_obj?.name || `Class ${c.class_obj || c.class}`}</p>
-                    <p className="text-xs text-blue-600 mt-0.5">{c.role || 'Class Teacher'}</p>
+                  <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div>
+                      <p className="font-medium text-blue-800">{c.class_name || c.class_obj?.name || c.class?.name || `Class ${c.class}`}</p>
+                      <p className="text-xs text-blue-600 mt-0.5">
+                        {c.is_form_tutor ? (
+                          <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Form Tutor</span>
+                        ) : (
+                          <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full">Teacher</span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveFromClass(c.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No classes assigned yet.</p>
+              <p className="text-gray-500 text-sm text-center py-4">No classes assigned yet. Click "Assign" to add this teacher to a class.</p>
             )}
           </div>
 
@@ -336,12 +513,16 @@ export default function TeacherDetailPage() {
             <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <FileText size={16} className="text-purple-600" />Subjects Teaching
             </h2>
-            {subjects.length > 0 ? (
+            {subjectsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              </div>
+            ) : subjects.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {subjects.map((s: any, i: number) => (
                   <div key={i} className="bg-purple-50 border border-purple-100 rounded-lg p-3 text-center">
-                    <p className="font-semibold text-purple-800 text-sm">{s.subject_name || s.subject?.name || `Subject ${s.subject}`}</p>
-                    <p className="text-xs text-purple-600 mt-0.5">{s.class_name || s.class_obj?.name || ''}</p>
+                    <p className="font-semibold text-purple-800 text-sm">{s.subject_name || s.subject?.name || s.subject || `Subject`}</p>
+                    <p className="text-xs text-purple-600 mt-0.5">{s.class_name || s.class_obj?.name || s.class?.name || ''}</p>
                   </div>
                 ))}
               </div>

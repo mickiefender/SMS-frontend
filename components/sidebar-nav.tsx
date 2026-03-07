@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
+import { CircularLoader } from "@/components/circular-loader"
 import {
   ChevronDown,
   LayoutDashboard,
@@ -67,7 +68,7 @@ const navSections: Record<string, NavSection[]> = {
         { label: "Teachers", href: "/dashboard/school-admin/teachers", icon: User },
         { label: "Student Assignment", href: "/dashboard/school-admin/student-assignment", icon: ClipboardCheck},
         { label: "Teacher Assignment", href: "/dashboard/school-admin/teacher-assignment", icon: FilePen },
-        
+        { label: "School Profile", href: "/dashboard/school-admin/settings", icon: Settings },
       ],
     },
     
@@ -89,6 +90,7 @@ const navSections: Record<string, NavSection[]> = {
       icon: CreditCard,
       items: [
         { label: "Manage Types", href: "/dashboard/school-admin/manage-fees", icon: CreditCard },
+        { label: "Collect Fees", href: "/dashboard/school-admin/collect-fees", icon: DollarSignIcon },
         { label: "Payments", href: "/dashboard/school-admin/payments", icon: CreditCard },
         { label: "Withdrawals", href: "/dashboard/school-admin/withdrawals", icon: DollarSignIcon },
         { label: "Receipts", href: "/dashboard/school-admin/receipts", icon: BookUser },
@@ -203,20 +205,40 @@ export function SidebarNav() {
     setExpandedSections(newExpanded)
   }
 
-  const schoolName = loading ? "Loading..." : school?.name || "School Name"
-  const schoolInitial = loading ? "" : school?.name.charAt(0) || "S"
+  const schoolName = loading ? (
+    <span className="flex items-center gap-2">
+      <CircularLoader size="sm" /> Loading...
+    </span>
+  ) : school?.name || "School Name"
+
+  // Get school logo URL - prefer logo_url, then logo_url_computed
+  const schoolLogoUrl = school?.logo_url || school?.logo_url_computed
+  const schoolInitial = loading ? "" : school?.name?.charAt(0) || "S"
 
   return (
     <aside className="w-64 bg-gradient-to-b from-[#1a3a52] to-[#0f2438] border-r border-[#ffc107]/20 h-screen flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-[#ffc107]/20">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 bg-[#ffc107] rounded-lg flex items-center justify-center font-bold text-[#1a3a52]">
-            {schoolInitial}
+        <div className="flex items-center gap-3">
+          {/* School Logo */}
+          {schoolLogoUrl ? (
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white">
+              <img 
+                src={schoolLogoUrl} 
+                alt={school?.name || "School"} 
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-[#ffc107] rounded-lg flex items-center justify-center font-bold text-[#1a3a52] flex-shrink-0">
+              {schoolInitial}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-bold text-white truncate">{schoolName}</h1>
+            <p className="text-xs text-[#ffc107]/80">School Management</p>
           </div>
-          <h1 className="text-xl font-bold text-white">{schoolName}</h1>
         </div>
-        <p className="text-xs text-[#ffc107]/80">School Management</p>
       </div>
 
       {/* Navigation */}

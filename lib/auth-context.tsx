@@ -21,7 +21,18 @@ interface User {
 interface School {
   id: number
   name: string
-  // Add other school properties as needed
+  email: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  country: string
+  postal_code: string
+  logo_url: string | null
+  logo_url_computed: string | null
+  website: string
+  status: string
+  plan?: { name: string }
 }
 
 interface AuthContextType {
@@ -48,9 +59,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const schools = response.data.results || response.data
       const schoolData = Array.isArray(schools) ? schools.find((s: any) => s.id === schoolId) : null
       setSchool(schoolData)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch school data", error)
-      // Handle error appropriately
+      // Handle 500 or network errors gracefully - set school to null
+      // This prevents the app from crashing when backend is unavailable
+      if (error.response?.status === 500) {
+        console.warn("Backend server error - school data unavailable")
+      }
+      setSchool(null)
     }
   }
 

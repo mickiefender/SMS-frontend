@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { academicsAPI, usersAPI } from "@/lib/api"
+import { CardLoader } from "@/components/circular-loader"
 
 interface TeacherAssignment {
   id: number
@@ -62,7 +63,16 @@ export function TeacherAssignment() {
   }
 
   if (loading) {
-    return <div className="text-center py-4">Loading assignments...</div>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Teacher Assignments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardLoader />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

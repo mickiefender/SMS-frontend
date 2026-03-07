@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { academicsAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { CardLoader } from "@/components/circular-loader"
 
 interface CalendarEvent {
   id: number
@@ -84,7 +85,12 @@ export function AcademicCalendar() {
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">Loading calendar events...</CardContent>
+        <CardHeader>
+          <CardTitle>Academic Calendar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardLoader />
+        </CardContent>
       </Card>
     )
   }

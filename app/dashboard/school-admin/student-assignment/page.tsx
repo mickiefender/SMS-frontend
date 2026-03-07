@@ -10,6 +10,7 @@ import { Search, Plus, Users, ArrowRight, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { EnrollStudentsInClass } from "@/components/enroll-students-in-class"
+import { CircularLoader } from "@/components/circular-loader"
 
 interface Class {
   id: number
@@ -92,9 +93,8 @@ export default function StudentAssignmentsPage() {
 
       {/* Classes Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 mt-4">Loading classes...</p>
+        <div className="flex justify-center py-12">
+          <CircularLoader size="lg" />
         </div>
       ) : filteredClasses.length === 0 ? (
         <Card className="border-0 shadow-sm">

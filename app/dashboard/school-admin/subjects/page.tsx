@@ -26,7 +26,7 @@ function SubjectsPageContent() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isOpen, setIsOpen] = useState(false)
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
-  const [formData, setFormData] = useState({ name: "", code: "", description: "", credit_hours: "3" })
+  const [formData, setFormData] = useState({ name: "", description: "", credit_hours: "3" })
   const [schoolId, setSchoolId] = useState<number | null>(null)
 
   const itemsPerPage = 10
@@ -85,8 +85,8 @@ function SubjectsPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      if (!formData.name || !formData.code) {
-        setError("Subject name and code are required")
+      if (!formData.name) {
+        setError("Subject name is required")
         return
       }
 
@@ -97,7 +97,6 @@ function SubjectsPageContent() {
 
       const data = {
         name: formData.name,
-        code: formData.code,
         description: formData.description,
         credit_hours: parseInt(formData.credit_hours, 10),
         school: schoolId,
@@ -106,13 +105,13 @@ function SubjectsPageContent() {
       console.log("[v0] Submitting subject data:", data)
 
       if (editingSubject) {
-        await academicsAPI.updateSubject(editingSubject.id, data)
+        await academicsAPI.updateSubject(editingSubject.id, { ...data, code: editingSubject.code })
       } else {
         await academicsAPI.createSubject(data)
       }
       setIsOpen(false)
       setEditingSubject(null)
-      setFormData({ name: "", code: "", description: "", credit_hours: "3" })
+      setFormData({ name: "", description: "", credit_hours: "3" })
       setError(null)
       fetchUserAndSubjects()
     } catch (err: any) {
@@ -125,7 +124,6 @@ function SubjectsPageContent() {
     setEditingSubject(subject)
     setFormData({ 
       name: subject.name, 
-      code: subject.code, 
       description: subject.description || "",
       credit_hours: "3"
     })
@@ -170,14 +168,6 @@ function SubjectsPageContent() {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Subject Code</Label>
-                <Input
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   required
                 />
               </div>

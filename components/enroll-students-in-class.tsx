@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Trash2, Plus, UserCheck } from "lucide-react"
 import { academicsAPI, usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { CircularLoader, CardLoader } from "@/components/circular-loader"
 
 interface StudentClass {
   id: number
@@ -137,7 +138,16 @@ export function EnrollStudentsInClass({ classId, className }: { classId: number;
     return !enrolledStudentIds.has(userId)
   })
 
-  if (loading) return <div className="text-center py-8">Loading...</div>
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Students in {className}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardLoader />
+      </CardContent>
+    </Card>
+  )
 
   return (
     <Card>

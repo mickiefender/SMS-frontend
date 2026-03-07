@@ -8,6 +8,7 @@ import { schoolsAPI } from "@/lib/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CardLoader } from "@/components/circular-loader"
 
 interface School {
   id: number
@@ -116,7 +117,16 @@ export function SchoolsManagement({ refreshTrigger }: SchoolsManagementProps) {
   }
 
   if (loading && schools.length === 0) {
-    return <div className="text-center py-4">Loading schools...</div>
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Schools Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardLoader />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

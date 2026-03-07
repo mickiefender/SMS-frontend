@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Trash2, Plus, Users } from "lucide-react"
 import { academicsAPI, usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { CircularLoader, CardLoader } from "@/components/circular-loader"
 
 interface ClassTeacher {
   id: number
@@ -146,7 +147,19 @@ export function AssignTeachersToClass({ classId, className }: { classId: number;
     return !assignedTeacherIds.has(userId)
   })
 
-  if (loading) return <div className="text-center py-8">Loading...</div>
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          Class Teachers
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardLoader />
+      </CardContent>
+    </Card>
+  )
 
   return (
     <Card>

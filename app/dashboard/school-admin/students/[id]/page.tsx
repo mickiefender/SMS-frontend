@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { usersAPI, academicsAPI, attendanceAPI } from '@/lib/api'
+import { usersAPI, academicsAPI, attendanceAPI, billingAPI } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ChevronLeft, Edit2, AlertCircle, BookOpen, DollarSign, Flag, FileText, Camera, Save, X, User, Phone, Mail, MapPin, Calendar, Briefcase, Heart, Users, MessageSquare, Download } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ChevronLeft, Edit2, AlertCircle, BookOpen, DollarSign, Flag, FileText, Camera, Save, X, User, Phone, Mail, MapPin, Calendar, Briefcase, Heart, Users, MessageSquare, Download, Trash2, Plus } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -62,11 +64,20 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [examResults, setExamResults] = useState<any[]>([])
   const [attendance, setAttendance] = useState<any>(null)
+  const [attendanceLoading, setAttendanceLoading] = useState(false)
+  const [examResultsLoading, setExamResultsLoading] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>({})
   const [notices, setNotices] = useState<any[]>([])
   const [dueFees, setDueFees] = useState(0)
   const [upcomingExams, setUpcomingExams] = useState(0)
   const [eventsCount, setEventsCount] = useState(0)
   const [docsCount, setDocsCount] = useState(0)
+  const [classes, setClasses] = useState<any[]>([])
+  const [enrollments, setEnrollments] = useState<any[]>([])
+  const [classesLoading, setClassesLoading] = useState(false)
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [selectedClassId, setSelectedClassId] = useState('')
+  const [assigningClass, setAssigningClass] = useState(false)
 
   const [profilePic, setProfilePic] = useState('')
   const [profilePicId, setProfilePicId] = useState<number | null>(null)
@@ -84,6 +95,60 @@ export default function StudentDetailPage() {
   })
 
   useEffect(() => { loadData() }, [studentId]) // eslint-disable-line
+
+  // Separate effect to load attendance and exam results after student is loaded
+  useEffect(() => {
+    if (student && (student.id || student.user_data?.id || student.user?.id)) {
+      loadAttendanceAndResults()
+    }
+  }, [student?.id, student?.user_data?.id, student?.user?.id]) // eslint-disable-line
+
+  const loadAttendanceAndResults = async () => {
+    if (!student) return
+    
+    // Get the actual user ID for filtering - this is what attendance and exam results use
+    const userIdNum = student.user_data?.id || student.user?.id || parseInt(studentId)
+    console.log("Loading data for user ID:", userIdNum, "student ID:", student.id)
+    
+    // Load Exam Results
+    setExamResultsLoading(true)
+    try {
+      const examRes = await academicsAPI.examResults()
+      const all = examRes.data.results || examRes.data || []
+      console.log("All exam results:", all.slice(0, 3)) // Log first 3 for debugging
+      const filtered = all.filter((r: any) => r.student === userIdNum)
+      console.log("Filtered exam results for user", userIdNum, ":", filtered)
+      setExamResults(filtered.slice(0, 6))
+      setDebugInfo((prev: any) => ({ ...prev, examResultsCount: filtered.length, allExamResultsCount: all.length, userId: userIdNum }))
+    } catch (err: any) { 
+      console.error("Exam results error:", err)
+      setDebugInfo((prev: any) => ({ ...prev, examError: err?.message || 'Error loading exam results' }))
+    } finally {
+      setExamResultsLoading(false)
+    }
+    
+    // Load Attendance
+    setAttendanceLoading(true)
+    try {
+      const a = await attendanceAPI.studentReport(userIdNum)
+      console.log("Attendance response for user", userIdNum, ":", a.data)
+      setDebugInfo((prev: any) => ({ ...prev, attendanceRaw: a.data }))
+      
+      if (a.data && typeof a.data === 'object') {
+        if ('total_days' in a.data || (a.data.records && Array.isArray(a.data.records))) {
+          setAttendance(a.data)
+        } else {
+          console.log("Attendance response missing expected fields:", Object.keys(a.data))
+          setDebugInfo((prev: any) => ({ ...prev, attendanceKeys: Object.keys(a.data) }))
+        }
+      }
+    } catch (err: any) { 
+      console.error("Attendance error:", err)
+      setDebugInfo((prev: any) => ({ ...prev, attendanceError: err?.message || 'Error loading attendance' }))
+    } finally {
+      setAttendanceLoading(false)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -111,28 +176,54 @@ export default function StudentDetailPage() {
           }
         } catch { /* no pic */ }
       }
+      // Load other data
       try {
-        const examRes = await academicsAPI.examResults()
-        const all = examRes.data.results || examRes.data || []
-        setExamResults(all.filter((r: any) => r.student?.id === parseInt(studentId) || r.student === parseInt(studentId)).slice(0, 6))
+        // Use billing API to get student-specific fee assignments
+        const feesRes = await billingAPI.studentFeeAssignmentsByStudent(parseInt(studentId))
+        const sf = (feesRes.data.results || feesRes.data || [])
+        setDueFees(sf.filter((f: any) => f.status === 'pending' || f.status === 'partial').reduce((s: number, f: any) => s + (parseFloat(f.amount) || 0) - (parseFloat(f.amount_paid) || 0), 0))
       } catch { /* skip */ }
-      try { 
-        const a = await attendanceAPI.studentReport(parseInt(studentId)); 
-        console.log("Student attendance response:", a.data)
-        setAttendance(a.data) 
-      } catch (err: any) { 
-        console.log("Attendance error:", err?.response?.data || err.message)
-        /* skip */ 
-      }
+      
+      // Also check for school-wide fee assignments
       try {
-        const feesRes = await academicsAPI.schoolFees()
-        const sf = (feesRes.data.results || feesRes.data || []).filter((f: any) => f.student?.id === parseInt(studentId) || f.student === parseInt(studentId))
-        setDueFees(sf.filter((f: any) => f.status === 'pending' || f.status === 'partial').reduce((s: number, f: any) => s + (parseFloat(f.amount_due) || 0) - (parseFloat(f.amount_paid) || 0), 0))
+        const schoolFeesRes = await billingAPI.schoolFeeAssignments()
+        const schoolFees = schoolFeesRes.data.results || schoolFeesRes.data || []
+        // School fees apply to all students in the school
+        const totalSchoolFees = schoolFees.filter((f: any) => f.status === 'pending' || !f.paid).reduce((s: number, f: any) => s + (parseFloat(f.amount) || 0), 0)
+        // Add school fees to due fees if no individual fees exist
+        setDueFees((prev: number) => prev + totalSchoolFees)
       } catch { /* skip */ }
       try { const e = await academicsAPI.exams(); setUpcomingExams((e.data.results || e.data || []).filter((x: any) => new Date(x.exam_date) > new Date()).length) } catch { /* skip */ }
       try { const ev = await academicsAPI.events(); setEventsCount(ev.data.results?.length || 0) } catch { /* skip */ }
       try { const d = await academicsAPI.documents(); setDocsCount(d.data.results?.length || 0) } catch { /* skip */ }
       try { const n = await academicsAPI.notices(); setNotices((n.data.results || n.data || []).slice(0, 5)) } catch { /* skip */ }
+      
+      // Load classes and student enrollments
+      try {
+        setClassesLoading(true)
+        const [classesRes, enrollmentsRes] = await Promise.all([
+          academicsAPI.classes(),
+          academicsAPI.studentClasses()
+        ])
+        
+        const allClasses = classesRes.data.results || classesRes.data || []
+        setClasses(allClasses)
+        
+        // Get the student user ID for filtering enrollments
+        const studentUserId = u?.id || null
+        
+        const allEnrollments = enrollmentsRes.data.results || enrollmentsRes.data || []
+        // Filter enrollments by student user ID
+        const studentEnrollments = allEnrollments.filter((e: any) => {
+          const enrollmentStudentId = e.student
+          return enrollmentStudentId === studentUserId || enrollmentStudentId === parseInt(studentId)
+        })
+        setEnrollments(studentEnrollments)
+      } catch (err) {
+        console.error("Error loading classes/enrollments:", err)
+      } finally {
+        setClassesLoading(false)
+      }
     } catch { setError('Failed to load student details') }
     finally { setLoading(false) }
   }
@@ -173,6 +264,59 @@ export default function StudentDetailPage() {
     } catch (err: any) { setError(err?.response?.data?.detail || 'Failed to save') }
     finally { setSaving(false) }
   }
+
+  const handleAssignClass = async () => {
+    if (!selectedClassId || !student) return
+    
+    const studentUserId = student.user_data?.id || student.user?.id || parseInt(studentId)
+    
+    try {
+      setAssigningClass(true)
+      await academicsAPI.createStudentClass({
+        class_obj: parseInt(selectedClassId),
+        student: studentUserId
+      })
+      setIsAssignDialogOpen(false)
+      setSelectedClassId('')
+      // Reload enrollments
+      const enrollmentsRes = await academicsAPI.studentClasses()
+      const allEnrollments = enrollmentsRes.data.results || enrollmentsRes.data || []
+      const studentEnrollments = allEnrollments.filter((e: any) => {
+        const enrollmentStudentId = e.student
+        return enrollmentStudentId === studentUserId || enrollmentStudentId === parseInt(studentId)
+      })
+      setEnrollments(studentEnrollments)
+    } catch (err: any) {
+      console.error("Error assigning class:", err)
+      setError(err?.response?.data?.detail || 'Failed to assign class')
+    } finally {
+      setAssigningClass(false)
+    }
+  }
+
+  const handleRemoveFromClass = async (enrollmentId: number) => {
+    if (!confirm("Are you sure you want to remove this student from the class?")) return
+    
+    try {
+      await academicsAPI.deleteStudentClass(enrollmentId)
+      // Reload enrollments
+      const studentUserId = student?.user_data?.id || student?.user?.id || parseInt(studentId)
+      const enrollmentsRes = await academicsAPI.studentClasses()
+      const allEnrollments = enrollmentsRes.data.results || enrollmentsRes.data || []
+      const studentEnrollments = allEnrollments.filter((e: any) => {
+        const enrollmentStudentId = e.student
+        return enrollmentStudentId === studentUserId || enrollmentStudentId === parseInt(studentId)
+      })
+      setEnrollments(studentEnrollments)
+    } catch (err: any) {
+      console.error("Error removing from class:", err)
+      setError(err?.response?.data?.detail || 'Failed to remove from class')
+    }
+  }
+
+  // Get enrolled class IDs for filtering available classes
+  const enrolledClassIds = new Set(enrollments.map((e) => e.class_obj))
+  const availableClasses = classes.filter((c) => !enrolledClassIds.has(c.id))
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-gray-600">Loading...</p></div>
   if (error || !student) return (
@@ -352,6 +496,94 @@ export default function StudentDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Class Assignment */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                <Users size={16} className="text-purple-600" />Class Enrollment
+              </h2>
+              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    <Plus size={14} /> Assign
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Assign Student to Class</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                        <p className="text-sm">{error}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Select Class</Label>
+                      <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableClasses.length > 0 ? (
+                            availableClasses.map((cls: any) => (
+                              <SelectItem key={cls.id} value={cls.id.toString()}>
+                                {cls.name} {cls.section ? `- ${cls.section}` : ''}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-sm text-gray-500">No classes available</div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      onClick={handleAssignClass} 
+                      disabled={!selectedClassId || assigningClass}
+                      className="w-full"
+                    >
+                      {assigningClass ? 'Assigning...' : 'Assign to Class'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            {classesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+              </div>
+            ) : enrollments.length > 0 ? (
+              <div className="space-y-2">
+                {enrollments.map((enrollment: any) => (
+                  <div key={enrollment.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div>
+                      <p className="font-medium text-blue-800">{enrollment.class_name || enrollment.class_obj?.name || `Class ${enrollment.class_obj}`}</p>
+                      <p className="text-xs text-blue-600">
+                        Enrolled: {enrollment.assigned_date ? new Date(enrollment.assigned_date).toLocaleDateString() : 'N/A'}
+                        {enrollment.is_active !== undefined && (
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${enrollment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {enrollment.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveFromClass(enrollment.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm text-center py-4">No classes assigned yet. Click "Assign" to add this student to a class.</p>
+            )}
+          </div>
         </div>
 
         {/* Right Column */}
@@ -508,11 +740,11 @@ export default function StudentDetailPage() {
                 <tbody>
                   {examResults.length > 0 ? examResults.map((r: any) => (
                     <tr key={r.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3">{r.exam_name || r.exam?.name || 'N/A'}</td>
-                      <td className="px-4 py-3">{r.subject_name || r.subject?.name || 'N/A'}</td>
-                      <td className="px-4 py-3">{r.grade_point?.toFixed(2) || 'N/A'}</td>
-                      <td className="px-4 py-3">{r.percentage || 'N/A'}</td>
-                      <td className="px-4 py-3">{r.date || (r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A')}</td>
+                      <td className="px-4 py-3">{r.exam_title || 'N/A'}</td>
+                      <td className="px-4 py-3">{r.subject_name || 'N/A'}</td>
+                      <td className="px-4 py-3">{r.marks_obtained?.toFixed(2) || r.grade || 'N/A'}</td>
+                      <td className="px-4 py-3">{r.percentage ? `${r.percentage.toFixed(1)}%` : 'N/A'}</td>
+                      <td className="px-4 py-3">{r.recorded_date ? new Date(r.recorded_date).toLocaleDateString() : 'N/A'}</td>
                     </tr>
                   )) : (
                     <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No exam results found</td></tr>

@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { academicsAPI, attendanceAPI, usersAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
-import { Search, CheckCircle, XCircle, Clock, UserCheck, Users, Calendar, BookOpen, Loader2, Save } from "lucide-react"
+import { Search, CheckCircle, XCircle, Clock, UserCheck, Users, Calendar, BookOpen, Save } from "lucide-react"
+import { CircularLoader } from "@/components/circular-loader"
 
 export function AttendanceTracker() {
   const { user } = useAuthContext()
@@ -174,8 +175,7 @@ export function AttendanceTracker() {
   if (loading) return (
     <Card className="w-full">
       <CardContent className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-3 text-gray-500">Loading classes...</span>
+        <CircularLoader size="lg" />
       </CardContent>
     </Card>
   )
@@ -362,7 +362,7 @@ export function AttendanceTracker() {
             >
               {submitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Submitting...
                 </>
               ) : (

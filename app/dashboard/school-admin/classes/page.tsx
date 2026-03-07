@@ -15,6 +15,7 @@ import { ClassSubjectsManagement } from "@/components/class-subjects-management"
 import { EnrollStudentsInClass } from "@/components/enroll-students-in-class"
 import { AssignTeachersToClass } from "@/components/assign-teachers-to-class"
 import { AssignSubjectTeachers } from "@/components/assign-subject-teachers"
+import { ProfileAvatar } from "@/components/profile-avatar"
 
 interface Class {
   id: number
@@ -29,6 +30,7 @@ interface Class {
     email: string
     phone: string
     gender: string
+    profile_picture?: string | null
   }
   teachers?: Array<{
     id: number
@@ -37,6 +39,7 @@ interface Class {
     phone: string
     gender: string
     is_form_tutor: boolean
+    profile_picture?: string | null
   }>
 }
 
@@ -357,15 +360,11 @@ function ClassesPageContent() {
                       <td className="px-4 py-3 text-gray-600">#{cls.code}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                            idx % 5 === 0 ? 'bg-blue-500' :
-                            idx % 5 === 1 ? 'bg-green-500' :
-                            idx % 5 === 2 ? 'bg-orange-500' :
-                            idx % 5 === 3 ? 'bg-pink-500' :
-                            'bg-purple-500'
-                          }`}>
-                            {cls.form_tutor?.name?.charAt(0).toUpperCase() || '?'}
-                          </div>
+                          <ProfileAvatar 
+                            src={cls.form_tutor?.profile_picture} 
+                            alt={cls.form_tutor?.name || 'Teacher'} 
+                            size="md"
+                          />
                         </div>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">

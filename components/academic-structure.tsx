@@ -76,7 +76,7 @@ export function AcademicStructure() {
 
   // Form data
   const [classForm, setClassForm] = useState({ name: "", level: "", capacity: 30 })
-  const [subjectForm, setSubjectForm] = useState({ code: "", name: "", description: "", credit_hours: 3 })
+  const [subjectForm, setSubjectForm] = useState({ name: "", description: "", credit_hours: 3 })
   const [enrollForm, setEnrollForm] = useState({ class_obj: "", student: "", subject: "" })
   const [assignForm, setAssignForm] = useState({ class_obj: "", subject: "", teacher: "" })
 
@@ -189,11 +189,13 @@ export function AcademicStructure() {
     e.preventDefault()
     try {
       await academicsAPI.createSubject({
-        ...subjectForm,
+        name: subjectForm.name,
+        description: subjectForm.description,
+        credit_hours: subjectForm.credit_hours,
         school: schoolId,
       })
       setShowSubjectDialog(false)
-      setSubjectForm({ code: "", name: "", description: "", credit_hours: 3 })
+      setSubjectForm({ name: "", description: "", credit_hours: 3 })
       fetchData()
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Failed to create subject")
@@ -436,16 +438,6 @@ export function AcademicStructure() {
                   <DialogTitle>Add New Subject</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreateSubject} className="space-y-4">
-                  <div>
-                    <Label htmlFor="subjectCode">Subject Code</Label>
-                    <Input
-                      id="subjectCode"
-                      value={subjectForm.code}
-                      onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
-                      placeholder="e.g., MTH101"
-                      required
-                    />
-                  </div>
                   <div>
                     <Label htmlFor="subjectName">Subject Name</Label>
                     <Input

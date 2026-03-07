@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { messagingAPI } from '@/lib/api'
 import { Bell, X } from 'lucide-react'
+import { CircularLoader } from "@/components/circular-loader"
 
 interface Notice {
   id: number
@@ -94,7 +95,11 @@ export default function TeacherNotificationsPage() {
           ))}
         </div>
 
-        {loading && <div className="text-center text-gray-500">Loading...</div>}
+        {loading && (
+          <div className="flex justify-center py-12">
+            <CircularLoader size="lg" />
+          </div>
+        )}
 
         {/* Notices Tab */}
         {activeTab === 'notices' && !loading && (

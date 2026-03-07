@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Trash2, Edit2, Plus, Search } from "lucide-react"
 import { academicsAPI } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
+import { CardLoader } from "@/components/circular-loader"
 
 interface Subject {
   id: number
@@ -104,7 +105,16 @@ export function ClassSubjectsManagement({ classId, className }: { classId: numbe
     }
   }
 
-  if (loading) return <div className="text-center py-8">Loading subjects...</div>
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Subjects in {className}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardLoader />
+      </CardContent>
+    </Card>
+  )
   if (error) return <div className="text-red-500 py-8">{error}</div>
 
   return (

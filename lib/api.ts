@@ -49,6 +49,10 @@ export const schoolsAPI = {
   update: (id: number, data: any) => apiClient.put(`/schools/schools/${id}/`, data),
   suspend: (id: number) => apiClient.post(`/schools/schools/${id}/suspend/`),
   activate: (id: number) => apiClient.post(`/schools/schools/${id}/activate/`),
+  uploadLogo: (formData: FormData) => 
+    apiClient.post("/schools/schools/upload_logo/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 }
 
 export const academicsAPI = {
@@ -222,6 +226,29 @@ export const attendanceAPI = {
     apiClient.get(`/attendance/student_report/?student_id=${studentId}&start_date=${startDate}&end_date=${endDate}`),
   classAttendance: (classId: number, date: string) => 
     apiClient.get(`/attendance/?class_obj=${classId}&date=${date}`),
+  // Class analytics
+  classReport: (classId?: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (classId) params.append('class_id', classId.toString())
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    return apiClient.get(`/attendance/class_report/?${params.toString()}`)
+  },
+  // Overall analytics
+  overallReport: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    return apiClient.get(`/attendance/overall_report/?${params.toString()}`)
+  },
+  // Subject analytics
+  subjectReport: (classId?: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (classId) params.append('class_id', classId.toString())
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    return apiClient.get(`/attendance/subject_report/?${params.toString()}`)
+  },
 }
 
 export const gradesAPI = {
@@ -425,11 +452,18 @@ export const billingAPI = {
   
   // Individual Student Fee Assignments
   studentFeeAssignments: () => apiClient.get("/billing/student-fee-assignments/"),
+  studentFeeAssignmentsByStudent: (studentId: number) => apiClient.get(`/billing/student-fee-assignments/?student=${studentId}`),
   createStudentFeeAssignment: (data: any) => apiClient.post("/billing/student-fee-assignments/", data),
   updateStudentFeeAssignment: (id: number, data: any) => apiClient.put(`/billing/student-fee-assignments/${id}/`, data),
   deleteStudentFeeAssignment: (id: number) => apiClient.delete(`/billing/student-fee-assignments/${id}/`),
   myFees: () => apiClient.get("/billing/student-fee-assignments/my_fees/"),
   markFeePaid: (id: number) => apiClient.post(`/billing/student-fee-assignments/${id}/mark_paid/`),
+  
+  // Manual Payments (NEW)
+  manualPayments: () => apiClient.get("/billing/manual-payments/"),
+  manualPaymentsByStudent: (studentId: number) => apiClient.get(`/billing/manual-payments/by_student/?student_id=${studentId}`),
+  manualPaymentsBySchool: () => apiClient.get("/billing/manual-payments/by_school/"),
+  recordManualPayment: (data: any) => apiClient.post("/billing/manual-payments/", data),
   
   // Invoices
   invoices: () => apiClient.get("/billing/invoices/"),

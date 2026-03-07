@@ -11,6 +11,7 @@ import AssignmentManagement from "@/components/AssignmentManagement"
 import StudentPerformance from "@/components/StudentPerformance"
 import LearningMaterials from "@/components/LearningMaterials"
 import TeacherMessaging from "@/components/TeacherMessaging"
+import { NoticeBoard } from "@/components/notice-board"
 
 export default function TeacherPage() {
   const { user } = useAuth()
@@ -194,6 +195,11 @@ export default function TeacherPage() {
             <p>Welcome to your teacher dashboard! Use the sidebar to navigate to different sections of your teaching toolkit. Each page provides tools to manage your classes, track student progress, and communicate effectively with your students and parents.</p>
           </CardContent>
         </Card>
+
+        {/* Notice Board */}
+        <div className="mt-6">
+          <NoticeBoard />
+        </div>
       </div>
     </ProtectedRoute>
   )

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { assignmentAPI } from "@/lib/api"
+import { CardLoader } from "@/components/circular-loader"
 
 export function AssignmentSubmissionGrading() {
   const [submissions, setSubmissions] = useState<any[]>([])
@@ -55,7 +56,16 @@ export function AssignmentSubmissionGrading() {
     }
   }
 
-  if (loading) return <div className="text-center py-4">Loading submissions...</div>
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Grade Submissions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardLoader />
+      </CardContent>
+    </Card>
+  )
 
   return (
     <Card>
