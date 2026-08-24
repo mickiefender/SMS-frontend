@@ -739,6 +739,7 @@ export const platformAPI = {
   settings: (params?: any) => apiClient.get("/platform/settings/", { params }),
   createSetting: (data: any) => apiClient.post("/platform/settings/", data),
   updateSetting: (id: number, data: any) => apiClient.put(`/platform/settings/${id}/`, data),
+  deleteSetting: (id: number) => apiClient.delete(`/platform/settings/${id}/`),
 
   // Notification campaigns
   campaigns: (params?: any) => apiClient.get("/platform/campaigns/", { params }),
@@ -782,6 +783,7 @@ export const platformAPI = {
   // Storage
   storageQuotas: () => apiClient.get("/platform/storage-quotas/"),
   upsertStorageQuota: (data: any) => apiClient.post("/platform/storage-quotas/", data),
+  deleteStorageQuota: (id: number) => apiClient.delete(`/platform/storage-quotas/${id}/`),
   recomputeStorage: () => apiClient.post("/platform/storage-quotas/recompute/"),
 
   // Monitoring

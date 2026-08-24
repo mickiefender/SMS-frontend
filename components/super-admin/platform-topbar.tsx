@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Activity,
   Bell,
+  ChevronDown,
   ChevronRight,
   LifeBuoy,
   LogOut,
@@ -16,7 +17,6 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import {
@@ -32,10 +32,18 @@ import { bgFetch } from "@/lib/api"
 import { useAuthContext } from "@/lib/auth-context"
 import { NAV_GROUPS } from "./platform-sidebar"
 
-const HEALTH_TONE: Record<string, string> = {
-  healthy: "bg-emerald-500",
-  degraded: "bg-amber-500",
-  down: "bg-red-500",
+type HealthTone = { dot: string; label: string }
+
+const HEALTH_TONE: Record<string, HealthTone> = {
+  healthy: { dot: "bg-emerald-500", label: "text-emerald-600" },
+  degraded: { dot: "bg-amber-500", label: "text-amber-600" },
+  down: { dot: "bg-red-500", label: "text-red-600" },
+}
+
+const HEALTH_PILL: Record<string, string> = {
+  healthy: "border-emerald-200 bg-emerald-50",
+  degraded: "border-amber-200 bg-amber-50",
+  down: "border-red-200 bg-red-50",
 }
 
 function flattenNav() {
@@ -59,6 +67,7 @@ export function PlatformTopbar() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [health, setHealth] = useState<string | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Background health probe — never blocks the global loader.
   useEffect(() => {
@@ -94,6 +103,19 @@ export function PlatformTopbar() {
     return () => document.removeEventListener("mousedown", onClick)
   }, [])
 
+  // ⌘K / Ctrl+K focuses global search.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return []
@@ -112,14 +134,17 @@ export function PlatformTopbar() {
     .toUpperCase() || "SA"
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "Super Admin"
 
+  const tone = HEALTH_TONE[health ?? ""]
+  const pill = HEALTH_PILL[health ?? ""]
+
   return (
-    <header className="sticky top-0 z-40 border-b border-sidebar-border bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/80">
-      <div className="flex h-18.5 items-center gap-3 px-4">
+    <header className="sticky top-0 z-40 h-14 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
+      <div className="flex h-14 items-center gap-3 px-4 lg:px-6">
         {/* Mobile nav */}
         <Sheet open={navOpen} onOpenChange={setNavOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation">
-              <Menu className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="-ml-2 lg:hidden" aria-label="Open navigation">
+              <Menu className="h-[18px] w-[18px]" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0 bg-sidebar overflow-y-auto">
@@ -159,18 +184,22 @@ export function PlatformTopbar() {
         </Sheet>
 
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1.5 text-[15px] min-w-0">
-          <Link href="/dashboard/super-admin" className="font-medium text-foreground/75 hover:text-foreground transition-colors shrink-0">
+        <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 min-w-0">
+          <Link
+            href="/dashboard/super-admin"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
             Platform
           </Link>
-          <ChevronRight className="h-4 w-4 text-foreground/50 shrink-0" />
-          <span className="font-bold tracking-tight truncate">{pageTitle(pathname)}</span>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" aria-hidden />
+          <span className="text-sm font-semibold tracking-tight truncate">{pageTitle(pathname)}</span>
         </nav>
 
         {/* Global search */}
-        <div ref={searchRef} className="relative ml-auto w-full max-w-xs hidden md:block">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <div ref={searchRef} className="relative ml-auto w-full max-w-sm hidden md:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -179,27 +208,34 @@ export function PlatformTopbar() {
             onFocus={() => setSearchOpen(true)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && results[0]) go(results[0].href)
-              if (e.key === "Escape") setSearchOpen(false)
+              if (e.key === "Escape") {
+                setSearchOpen(false)
+                searchInputRef.current?.blur()
+              }
             }}
             placeholder="Search pages…"
-            className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-12 text-sm text-foreground placeholder:text-muted-foreground/80 outline-none focus:ring-1 focus:ring-ring"
+            className="h-9 w-full rounded-lg border border-transparent bg-muted pl-9 pr-14 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:bg-card focus:ring-2 focus:ring-ring/15"
           />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 text-[10px] text-muted-foreground">
-            ⏎
+          <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+            ⌘K
           </kbd>
 
           {searchOpen && results.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 rounded-md border border-border bg-popover shadow-md overflow-hidden">
+            <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-border bg-popover shadow-lg shadow-black/5 overflow-hidden animate-glass-in">
+              <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Pages
+              </p>
               {results.map((r) => (
                 <button
                   key={r.href}
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => go(r.href)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-foreground/90 hover:bg-muted transition-colors text-left"
                 >
-                  <r.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  {r.label}
+                  <r.icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">{r.label}</span>
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
                 </button>
               ))}
             </div>
@@ -207,65 +243,82 @@ export function PlatformTopbar() {
         </div>
 
         {/* Right cluster */}
-        <div className="flex items-center gap-1 md:ml-0 ml-auto">
+        <div className="flex items-center gap-1 md:ml-auto ml-auto md:ml-3">
           {/* System health */}
           <Link
             href="/dashboard/super-admin/monitoring"
             title={health ? `System status: ${health}` : "System monitoring"}
-            className="hidden sm:flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 hover:bg-muted hover:text-foreground transition-colors"
+            className={`hidden sm:inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              pill ?? "border-border bg-muted text-muted-foreground"
+            }`}
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-1.5 w-1.5">
               {health === "healthy" && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
               )}
-              <span className={`relative inline-flex h-2 w-2 rounded-full ${HEALTH_TONE[health ?? ""] ?? "bg-slate-400"}`} />
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${tone?.dot ?? "bg-slate-400"}`} />
             </span>
-            <span className="capitalize">{health ?? "Status"}</span>
+            <span className={tone?.label ?? ""}>
+              {health ? `All systems ${health === "healthy" ? "operational" : health}` : "Status"}
+            </span>
           </Link>
 
-          <Separator orientation="vertical" className="hidden sm:block h-5 mx-1" />
+          <Separator orientation="vertical" className="hidden sm:block h-5 mx-1.5" />
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" asChild aria-label="Notifications">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Notifications"
+          >
             <Link href="/dashboard/super-admin/notifications">
-              <Bell className="h-4 w-4" />
+              <Bell className="h-[18px] w-[18px]" />
             </Link>
           </Button>
 
           {/* Support */}
-          <Button variant="ghost" size="icon" asChild className="hidden sm:inline-flex" aria-label="Support center">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="hidden sm:inline-flex text-muted-foreground hover:text-foreground"
+            aria-label="Support center"
+          >
             <Link href="/dashboard/super-admin/support">
-              <LifeBuoy className="h-4 w-4" />
+              <LifeBuoy className="h-[18px] w-[18px]" />
             </Link>
           </Button>
 
-          <Separator orientation="vertical" className="h-5 mx-1" />
+          <Separator orientation="vertical" className="hidden sm:block h-5 mx-1.5" />
 
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-md pl-1 pr-2 py-1 hover:bg-muted transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex items-center gap-2 rounded-lg pl-0.5 pr-1.5 py-1 hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
               >
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
+                <Avatar className="h-7 w-7 ring-1 ring-border">
+                  <AvatarFallback className="bg-secondary-dark text-secondary-foreground text-[11px] font-bold tracking-wide">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden lg:block text-sm font-semibold max-w-[140px] truncate">
+                <span className="hidden lg:block max-w-[140px] truncate text-sm font-medium">
                   {fullName}
                 </span>
+                <ChevronDown className="hidden lg:block h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuLabel className="font-normal">
                 <p className="text-sm font-medium truncate">{fullName}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
-                <Badge variant="outline" className="mt-1.5 gap-1 text-[10px] capitalize">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-dark">
                   <ShieldCheck className="h-3 w-3" />
-                  super admin
-                </Badge>
+                  Super Admin
+                </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => go("/dashboard/super-admin/audit-logs")}>
@@ -279,7 +332,7 @@ export function PlatformTopbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-red-500 focus:text-red-500"
+                className="text-destructive focus:text-destructive"
                 onClick={() => logout()}
               >
                 <LogOut className="h-4 w-4 mr-2" /> Sign out

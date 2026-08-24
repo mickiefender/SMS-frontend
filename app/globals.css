@@ -572,6 +572,30 @@
   box-shadow: inset 2px 0 0 var(--primary);
 }
 
+/* Console-style category rail (light page surface) */
+.sa-cat-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sa-cat-link:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.sa-cat-link.is-active,
+.sa-cat-link[data-active='true'] {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
 /* Darker skeletons inside the console so they stay visible on the
    light page background (the default bg-accent/70 is near-invisible). */
 .sa-theme [data-slot='skeleton'] {

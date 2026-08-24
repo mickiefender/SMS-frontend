@@ -1,0 +1,16 @@
+app/dashboard/school-admin/students/[id]/page-updated.tsx(279,7): error TS1005: 'try' expected.
+app/dashboard/school-admin/students/[id]/page-updated.tsx(287,3): error TS1472: 'catch' or 'finally' expected.
+app/dashboard/school-admin/students/[id]/page-updated.tsx(877,1): error TS1005: '}' expected.
+components/teacher-classes-dashboard.tsx(228,10): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+components/teacher-classes-dashboard.tsx(229,8): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+components/teacher-classes-dashboard.tsx(361,11): error TS17015: Expected corresponding closing tag for JSX fragment.
+components/teacher-classes-dashboard.tsx(361,15): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+components/teacher-classes-dashboard.tsx(362,8): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+lib/api.ts-broken-backup.ts(304,78): error TS1127: Invalid character.
+lib/api.ts-broken-backup.ts(304,82): error TS1005: ',' expected.
+lib/api.ts-broken-backup.ts(304,167): error TS1127: Invalid character.
+lib/api.ts-broken-backup.ts(304,173): error TS1005: ',' expected.
+lib/api.ts-broken-backup.ts(304,182): error TS1005: ',' expected.
+lib/api.ts-broken-backup.ts(304,268): error TS1127: Invalid character.
+lib/api.ts-broken-backup.ts(304,272): error TS1005: ',' expected.
+lib/api.ts-broken-backup.ts(304,352): error TS1127: Invalid character.
