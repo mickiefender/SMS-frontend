@@ -698,6 +698,146 @@ export const superAdminAPI = {
   analytics: () => apiClient.get("/schools/schools/super_admin_analytics/"),
 }
 
+export const platformAPI = {
+  // Dashboard
+  overview: () => apiClient.get("/platform/overview/"),
+  health: () => apiClient.get("/platform/health/"),
+
+  // Roles & permissions (RBAC)
+  roles: (params?: any) => apiClient.get("/platform/roles/", { params }),
+  createRole: (data: any) => apiClient.post("/platform/roles/", data),
+  updateRole: (id: number, data: any) => apiClient.put(`/platform/roles/${id}/`, data),
+  deleteRole: (id: number) => apiClient.delete(`/platform/roles/${id}/`),
+  assignRole: (roleId: number, userId: number) => apiClient.post(`/platform/roles/${roleId}/assign/`, { user_id: userId }),
+  unassignRole: (roleId: number, userId: number) => apiClient.post(`/platform/roles/${roleId}/unassign/`, { user_id: userId }),
+  roleAssignments: () => apiClient.get("/platform/roles/assignments/"),
+
+  // Audit logs
+  auditLogs: (params?: any) => apiClient.get("/platform/audit-logs/", { params }),
+
+  // Impersonation
+  impersonations: () => apiClient.get("/platform/impersonate/"),
+  startImpersonation: (targetUserId: number, reason: string) =>
+    apiClient.post("/platform/impersonate/", { target_user_id: targetUserId, reason }),
+  stopImpersonation: () => apiClient.delete("/platform/impersonate/"),
+
+  // Support center
+  tickets: (params?: any) => apiClient.get("/platform/tickets/", { params }),
+  ticketDetail: (id: number) => apiClient.get(`/platform/tickets/${id}/`),
+  createTicket: (data: any) => apiClient.post("/platform/tickets/", data),
+  updateTicket: (id: number, data: any) => apiClient.put(`/platform/tickets/${id}/`, data),
+  ticketComments: (id: number) => apiClient.get(`/platform/tickets/${id}/comments/`),
+  addTicketComment: (id: number, data: any) => apiClient.post(`/platform/tickets/${id}/comments/`, data),
+
+  // Feature flags
+  featureFlags: (params?: any) => apiClient.get("/platform/feature-flags/", { params }),
+  createFeatureFlag: (data: any) => apiClient.post("/platform/feature-flags/", data),
+  updateFeatureFlag: (id: number, data: any) => apiClient.put(`/platform/feature-flags/${id}/`, data),
+  deleteFeatureFlag: (id: number) => apiClient.delete(`/platform/feature-flags/${id}/`),
+
+  // System settings
+  settings: (params?: any) => apiClient.get("/platform/settings/", { params }),
+  createSetting: (data: any) => apiClient.post("/platform/settings/", data),
+  updateSetting: (id: number, data: any) => apiClient.put(`/platform/settings/${id}/`, data),
+
+  // Notification campaigns
+  campaigns: (params?: any) => apiClient.get("/platform/campaigns/", { params }),
+  createCampaign: (data: any) => apiClient.post("/platform/campaigns/", data),
+  updateCampaign: (id: number, data: any) => apiClient.put(`/platform/campaigns/${id}/`, data),
+  sendCampaign: (id: number) => apiClient.post(`/platform/campaigns/${id}/send/`),
+  deleteCampaign: (id: number) => apiClient.delete(`/platform/campaigns/${id}/`),
+
+  // API keys & webhooks
+  apiKeys: () => apiClient.get("/platform/api-keys/"),
+  createApiKey: (data: any) => apiClient.post("/platform/api-keys/", data),
+  revokeApiKey: (id: number) => apiClient.delete(`/platform/api-keys/${id}/`),
+  apiKeyUsage: (id: number) => apiClient.get(`/platform/api-keys/${id}/usage/`),
+  webhooks: () => apiClient.get("/platform/webhooks/"),
+  createWebhook: (data: any) => apiClient.post("/platform/webhooks/", data),
+  updateWebhook: (id: number, data: any) => apiClient.put(`/platform/webhooks/${id}/`, data),
+  deleteWebhook: (id: number) => apiClient.delete(`/platform/webhooks/${id}/`),
+
+  // Security
+  securityEvents: (params?: any) => apiClient.get("/platform/security-events/", { params }),
+  sessions: (params?: any) => apiClient.get("/platform/sessions/", { params }),
+  revokeSession: (id: number) => apiClient.post(`/platform/sessions/${id}/revoke/`),
+
+  // Moderation
+  moderationReports: (params?: any) => apiClient.get("/platform/moderation-reports/", { params }),
+  updateModerationReport: (id: number, data: any) => apiClient.put(`/platform/moderation-reports/${id}/`, data),
+  patchModerationReport: (id: number, data: any) => apiClient.patch(`/platform/moderation-reports/${id}/`, data),
+
+  // Finance
+  coupons: () => apiClient.get("/platform/coupons/"),
+  createCoupon: (data: any) => apiClient.post("/platform/coupons/", data),
+  updateCoupon: (id: number, data: any) => apiClient.put(`/platform/coupons/${id}/`, data),
+  deleteCoupon: (id: number) => apiClient.delete(`/platform/coupons/${id}/`),
+  invoices: (params?: any) => apiClient.get("/platform/invoices/", { params }),
+  createInvoice: (data: any) => apiClient.post("/platform/invoices/", data),
+  markInvoicePaid: (id: number) => apiClient.post(`/platform/invoices/${id}/mark_paid/`),
+  refunds: () => apiClient.get("/platform/refunds/"),
+  createRefund: (data: any) => apiClient.post("/platform/refunds/", data),
+  processRefund: (id: number) => apiClient.post(`/platform/refunds/${id}/process/`),
+
+  // Storage
+  storageQuotas: () => apiClient.get("/platform/storage-quotas/"),
+  upsertStorageQuota: (data: any) => apiClient.post("/platform/storage-quotas/", data),
+  recomputeStorage: () => apiClient.post("/platform/storage-quotas/recompute/"),
+
+  // Monitoring
+  monitoring: (params?: any) => apiClient.get("/platform/monitoring/", { params }),
+}
+
+/**
+ * Super Admin Feed Supervisor — global supervision over the EXISTING
+ * Alara Feed (FeedLesson / FeedReport). All endpoints require the
+ * super_admin role and are audited server-side.
+ */
+export const feedSupervisorAPI = {
+  // Overview stats (cached server-side for 60s)
+  overview: () => apiClient.get("/feed/supervisor/overview/", { _trackLoading: false } as any),
+
+  // All posts across every school — paginated + filterable
+  posts: (params?: any) => apiClient.get("/feed/supervisor/posts/", { params }),
+  moderatePost: (postId: number, data: { action: string; notes?: string }) =>
+    apiClient.post(`/feed/supervisor/posts/${postId}/moderate/`, data),
+
+  // Reported content queue
+  reports: (params?: any) => apiClient.get("/feed/supervisor/reports/", { params }),
+  handleReport: (
+    reportId: number,
+    data: {
+      action:
+        | "dismiss"
+        | "hide_post"
+        | "remove_post"
+        | "warn_creator"
+        | "restrict_creator"
+        | "suspend_creator"
+      notes?: string
+    },
+  ) => apiClient.post(`/feed/supervisor/reports/${reportId}/handle/`, data),
+
+  // Creator monitoring
+  creators: (params?: any) => apiClient.get("/feed/supervisor/creators/", { params }),
+  creatorDetail: (teacherId: number) =>
+    apiClient.get(`/feed/supervisor/creators/${teacherId}/`),
+  restrictCreator: (teacherId: number, notes?: string) =>
+    apiClient.post(`/feed/supervisor/creators/${teacherId}/restrict/`, { notes }),
+  suspendCreator: (teacherId: number, notes?: string) =>
+    apiClient.post(`/feed/supervisor/creators/${teacherId}/suspend/`, { notes }),
+  unrestrictCreator: (teacherId: number, notes?: string) =>
+    apiClient.post(`/feed/supervisor/creators/${teacherId}/unrestrict/`, { notes }),
+
+  // School monitoring
+  schools: (params?: any) => apiClient.get("/feed/supervisor/schools/", { params }),
+
+  // Feed moderation policies
+  settings: () => apiClient.get("/feed/supervisor/settings/"),
+  updateSettings: (data: Record<string, unknown>) =>
+    apiClient.put("/feed/supervisor/settings/", data),
+}
+
 export default {
   authAPI,
   schoolsAPI,
@@ -711,5 +851,7 @@ export default {
   timetableAPI,
   assignmentAPI,
   billingAPI,
-  superAdminAPI
+  superAdminAPI,
+  platformAPI,
+  feedSupervisorAPI,
 }

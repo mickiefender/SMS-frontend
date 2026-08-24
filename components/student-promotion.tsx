@@ -81,12 +81,21 @@ type PreviewClass = {
   students: PreviewStudent[]
 }
 
+type Diagnostics = {
+  total_active_students: number
+  students_with_class_assignment: number
+  unassigned_students: number
+  backfilled_enrollments: number
+  rules_configured: number
+}
+
 type Preview = {
   source_year: { id: number; name: string }
   destination_year: { id: number; name: string }
   policy_mode: string
   classes: PreviewClass[]
   summary: Record<string, number>
+  diagnostics?: Diagnostics
 }
 
 // Editable per-student decision (overrides the recommendation)
@@ -136,6 +145,7 @@ export function StudentPromotion({ onPromoted }: { onPromoted?: () => void }) {
   const [confirming, setConfirming] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [search, setSearch] = useState("")
+  const [selectedClassIds, setSelectedClassIds] = useState<number[]>([])
   const [showCreateYear, setShowCreateYear] = useState(false)
   const [newYear, setNewYear] = useState({ name: "", start_date: "", end_date: "", is_current: false })
 
@@ -179,6 +189,7 @@ export function StudentPromotion({ onPromoted }: { onPromoted?: () => void }) {
       const res = await promotionAPI.previewPromotion({
         source_academic_year: Number(sourceYear),
         destination_academic_year: Number(destYear),
+        ...(selectedClassIds.length > 0 ? { class_ids: selectedClassIds } : {}),
       })
       const data: Preview = res.data
       setPreview(data)
@@ -346,11 +357,99 @@ export function StudentPromotion({ onPromoted }: { onPromoted?: () => void }) {
               No academic years yet — create one (e.g. 2025/2026) to get started.
             </p>
           )}
+
+          {/* Class selection: which classes to include in this promotion run */}
+          {classes.length > 0 && (
+            <div className="space-y-2">
+              <Label>
+                Classes To Promote
+                <span className="text-muted-foreground font-normal">
+                  {" "}— leave all unchecked to include every class
+                </span>
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {classes.map((c) => {
+                  const active = selectedClassIds.includes(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedClassIds((prev) =>
+                          prev.includes(c.id)
+                            ? prev.filter((id) => id !== c.id)
+                            : [...prev, c.id],
+                        )
+                      }
+                      className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-secondary/60 border-border"
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedClassIds.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Preview will only include {selectedClassIds.length} of {classes.length} classes.
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* ── Step 2: Preview + review ─────────────────────────── */}
-      {preview && (
+      {preview && preview.summary.total === 0 && (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardContent className="py-5 space-y-2">
+            <p className="font-medium text-amber-900 flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              No students found for promotion in {preview.source_year.name}
+            </p>
+            {preview.diagnostics && (
+              <div className="text-sm text-amber-800 space-y-1">
+                <p>
+                  Students in your school: <strong>{preview.diagnostics.total_active_students}</strong>{" "}
+                  · With a class assignment:{" "}
+                  <strong>{preview.diagnostics.students_with_class_assignment}</strong>
+                  {preview.diagnostics.unassigned_students > 0 && (
+                    <>
+                      {" "}· Not assigned to any class:{" "}
+                      <strong>{preview.diagnostics.unassigned_students}</strong>
+                    </>
+                  )}
+                </p>
+                {preview.diagnostics.total_active_students === 0 ? (
+                  <p>No active students exist yet — create student accounts first.</p>
+                ) : preview.diagnostics.students_with_class_assignment === 0 ? (
+                  <p>
+                    None of your students are assigned to a class yet. Go to{" "}
+                    <strong>Classes → Manage → Students</strong> and enroll students into their
+                    classes, then run the preview again.
+                  </p>
+                ) : preview.diagnostics.rules_configured === 0 ? (
+                  <p>
+                    Students were found, but no class progression rules are configured — open the{" "}
+                    <strong>Class Rules</strong> tab to define where each class promotes to.
+                    Without rules every student lands in &ldquo;Needs Review&rdquo;.
+                  </p>
+                ) : (
+                  <p>
+                    Enrolled students exist but none matched this selection. Check that you picked
+                    the correct source year (the year your students are currently enrolled in).
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {preview && preview.summary.total > 0 && (
         <>
           {/* Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

@@ -1,160 +1,175 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { billingAPI, superAdminAPI, usersAPI } from "@/lib/api"
-import { useAuthContext } from "@/lib/auth-context"
-import type { AnyObj, UserFilters } from "@/components/super-admin/types"
-import KpiCards from "@/components/super-admin/kpi-cards"
-import SchoolsUsageSection from "@/components/super-admin/schools-usage-section"
-import GlobalUsersSection from "@/components/super-admin/global-users-section"
-import BillingSection from "@/components/super-admin/billing-section"
-import AnalyticsSection from "@/components/super-admin/analytics-section"
-import TeamApplicationsSection from "@/components/super-admin/team-applications-section"
+import Link from "next/link"
+import {
+  Activity,
+  Building2,
+  CircleDollarSign,
+  Database,
+  GraduationCap,
+  ShieldAlert,
+  Ticket,
+  Users,
+} from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { platformAPI } from "@/lib/api"
+import type { AnyObj } from "@/components/super-admin/types"
+import { useFetch } from "@/components/super-admin/use-fetch"
+import { PageHeader } from "@/components/super-admin/page-header"
+import { StatCard, StatCardGrid } from "@/components/super-admin/stat-card"
+import { SaAreaChart } from "@/components/super-admin/charts"
+import { StatusBadge } from "@/components/super-admin/status-badge"
+
+function fmtMoney(value: number) {
+  return `GH₵ ${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+}
 
 export default function SuperAdminDashboardPage() {
-  const { user } = useAuthContext()
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState("")
+  const overview = useFetch<AnyObj>(() => platformAPI.overview().then((r) => r.data), [])
+  const health = useFetch<AnyObj>(() => platformAPI.health().then((r) => r.data), [])
+  const logs = useFetch<AnyObj[]>(() => platformAPI.auditLogs({ page_size: 8 }).then((r) => r.data?.results || []), [])
 
-  const [usage, setUsage] = useState<AnyObj[]>([])
-  const [analytics, setAnalytics] = useState<AnyObj | null>(null)
-  const [billingOverview, setBillingOverview] = useState<AnyObj | null>(null)
-  const [billingRevenue, setBillingRevenue] = useState<AnyObj | null>(null)
-  const [gatewayConfig, setGatewayConfig] = useState<AnyObj | null>(null)
-
-  const [users, setUsers] = useState<AnyObj[]>([])
-  const [userFilters, setUserFilters] = useState<UserFilters>({ school_id: "", role: "" })
-  const [resetPasswordState, setResetPasswordState] = useState<{ [k: number]: string }>({})
-
-  const isSuperAdmin = user?.role === "super_admin"
-
-  const extractError = (err: any, fallback: string) =>
-    err?.response?.data?.detail || err?.response?.data?.message || err?.message || fallback
-
-const fetchAll = async () => {
-    setLoading(true)
-    setErrorMessage("")
-    try {
-      // Sequential fetches to avoid Turbopack race conditions
-      const usageRes = await superAdminAPI.usage()
-      setUsage(usageRes.data?.results || [])
-
-      const analyticsRes = await superAdminAPI.analytics()
-      setAnalytics(analyticsRes.data || null)
-
-      const usersRes = await usersAPI.listGlobal({
-        ...(userFilters.school_id ? { school_id: userFilters.school_id } : {}),
-        ...(userFilters.role ? { role: userFilters.role } : {}),
-      })
-      setUsers(usersRes.data?.results || usersRes.data || [])
-
-      const overviewRes = await billingAPI.superAdminOverview()
-      setBillingOverview(overviewRes.data || null)
-
-      const revenueRes = await billingAPI.superAdminRevenueAnalytics()
-      setBillingRevenue(revenueRes.data || null)
-
-      const gatewayRes = await billingAPI.superAdminGatewayConfig()
-      setGatewayConfig(gatewayRes.data || null)
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to load super admin data."))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (isSuperAdmin) fetchAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin])
-
-  const onFilterUsers = async () => {
-    try {
-      const res = await usersAPI.listGlobal({
-        ...(userFilters.school_id ? { school_id: userFilters.school_id } : {}),
-        ...(userFilters.role ? { role: userFilters.role } : {}),
-      })
-      setUsers(res.data?.results || res.data || [])
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to filter users."))
-    }
-  }
-
-  const onBan = async (id: number) => {
-    try {
-      await usersAPI.banUser(id)
-      await onFilterUsers()
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to ban user."))
-    }
-  }
-
-  const onSuspend = async (id: number) => {
-    try {
-      await usersAPI.suspendUser(id)
-      await onFilterUsers()
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to suspend user."))
-    }
-  }
-
-  const onResetPassword = async (id: number) => {
-    const password = resetPasswordState[id]
-    if (!password) return
-    try {
-      await usersAPI.resetPassword(id, password)
-      setResetPasswordState((s) => ({ ...s, [id]: "" }))
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to reset password."))
-    }
-  }
-
-  const onAssignRole = async (id: number, role: string) => {
-    if (!role) return
-    try {
-      await usersAPI.assignGlobalRole(id, role)
-      await onFilterUsers()
-    } catch (err: any) {
-      setErrorMessage(extractError(err, "Failed to assign role."))
-    }
-  }
-
-  if (!isSuperAdmin) return <div className="p-6">Unauthorized</div>
+  const o = overview.data
+  const loading = overview.loading
 
   return (
-    <div className="p-6 space-y-8">
-      <div className="animate-glass-in">
-        <h1 className="text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Platform-wide schools, users, billing and analytics</p>
+    <div className="p-4 md:p-6 space-y-6">
+      <PageHeader
+        title="Platform Dashboard"
+        description="High-level view of schools, users, revenue and system health across the entire Alara platform."
+      />
+
+      {overview.error && (
+        <div className="glass-red rounded-xl p-3 text-sm text-red-300">{overview.error}</div>
+      )}
+
+      {/* Schools */}
+      <StatCardGrid>
+        <StatCard label="Total Schools" value={o?.schools?.total ?? 0} icon={Building2} sub={`${o?.schools?.active ?? 0} active`} />
+        <StatCard label="Active Schools" value={o?.schools?.active ?? 0} icon={Building2} tone="success" />
+        <StatCard label="Trial Schools" value={o?.schools?.trial ?? 0} icon={Building2} tone="warning" />
+        <StatCard label="Suspended Schools" value={o?.schools?.suspended ?? 0} icon={ShieldAlert} tone="danger" />
+      </StatCardGrid>
+
+      {/* Users */}
+      <StatCardGrid>
+        <StatCard label="Total Students" value={o?.users?.students ?? 0} icon={GraduationCap} />
+        <StatCard label="Total Teachers" value={o?.users?.teachers ?? 0} icon={Users} />
+        <StatCard label="Total Parents" value={o?.users?.parents ?? 0} icon={Users} />
+        <StatCard
+          label="Total Users"
+          value={o?.users?.total ?? 0}
+          icon={Activity}
+          sub={`${o?.users?.active_today ?? 0} active today · ${o?.users?.active_30d ?? 0} in last 30d`}
+        />
+      </StatCardGrid>
+
+      {/* Revenue + subscriptions + storage + ops */}
+      <StatCardGrid>
+        <StatCard label="Revenue (all time)" value={fmtMoney(o?.revenue?.total ?? 0)} icon={CircleDollarSign} tone="primary" />
+        <StatCard label="Revenue this month" value={fmtMoney(o?.revenue?.this_month ?? 0)} icon={CircleDollarSign} />
+        <StatCard
+          label="Subscriptions"
+          value={`${o?.subscriptions?.active ?? 0} / ${o?.subscriptions?.cancelled ?? 0}`}
+          icon={CircleDollarSign}
+          sub="active / cancelled"
+        />
+        <StatCard
+          label="Storage used"
+          value={`${((o?.storage?.used_mb ?? 0) / 1024).toFixed(1)} GB`}
+          icon={Database}
+          sub={`${o?.storage?.used_mb ?? 0} MB total`}
+        />
+      </StatCardGrid>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Growth — schools & users (last 6 months)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-[260px] w-full" />
+            ) : (
+              <SaAreaChart
+                data={(o?.growth as AnyObj[]) || []}
+                xKey="month"
+                series={[
+                  { key: "schools", label: "New schools" },
+                  { key: "users", label: "New users" },
+                ]}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">System health</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {health.loading && <Skeleton className="h-24 w-full" />}
+            {!health.loading &&
+              ((health.data?.checks as AnyObj[]) || []).map((c) => (
+                <div key={c.component} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="capitalize">{String(c.component).replace(/_/g, " ")}</span>
+                  <StatusBadge status={c.status} />
+                </div>
+              ))}
+            {!health.loading && !health.data?.checks?.length && (
+              <p className="text-sm text-muted-foreground">No health data available.</p>
+            )}
+            <div className="pt-2 border-t border-border flex items-center justify-between gap-2 text-sm">
+              <span>Open support tickets</span>
+              <Link href="/dashboard/super-admin/support" className="flex items-center gap-1.5 font-medium text-primary hover:underline">
+                <Ticket className="h-4 w-4" /> {o?.support?.open_tickets ?? 0}
+              </Link>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span>Pending moderation</span>
+              <Link href="/dashboard/super-admin/moderation" className="font-medium text-primary hover:underline">
+                {o?.moderation?.pending ?? 0}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {errorMessage ? (
-        <div className="glass-red rounded-xl text-red-700 dark:text-red-300 p-3 text-sm animate-glass-in">
-          {errorMessage}
-        </div>
-      ) : null}
-
-      <KpiCards analytics={analytics} />
-      <SchoolsUsageSection usage={usage} />
-      <GlobalUsersSection
-        users={users}
-        userFilters={userFilters}
-        setUserFilters={setUserFilters}
-        resetPasswordState={resetPasswordState}
-        setResetPasswordState={setResetPasswordState}
-        onFilterUsers={onFilterUsers}
-        onBan={onBan}
-        onSuspend={onSuspend}
-        onResetPassword={onResetPassword}
-        onAssignRole={onAssignRole}
-      />
-      <BillingSection
-        billingOverview={billingOverview}
-        billingRevenue={billingRevenue}
-        gatewayConfig={gatewayConfig}
-      />
-      <AnalyticsSection analytics={analytics} />
-      <TeamApplicationsSection />
+      {/* Recent activity */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Recent platform activity</CardTitle>
+          <Link href="/dashboard/super-admin/audit-logs" className="text-xs text-primary hover:underline">
+            View all →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {logs.loading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : !logs.data?.length ? (
+            <p className="text-sm text-muted-foreground">No recent activity recorded.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {logs.data.map((log) => (
+                <li key={log.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm">
+                  <span className="font-medium w-44 shrink-0 truncate">{log.actor_name || "System"}</span>
+                  <code className="text-xs bg-muted rounded px-1.5 py-0.5 w-fit">{log.action}</code>
+                  <span className="text-muted-foreground truncate">{log.target_label || log.target_type}</span>
+                  <span className="sm:ml-auto text-xs text-muted-foreground shrink-0">
+                    {new Date(log.created_at).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

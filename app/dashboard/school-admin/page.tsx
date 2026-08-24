@@ -3,13 +3,13 @@
 import dynamic from 'next/dynamic'
 import { ProtectedRoute } from '@/lib/protected-route'
 import { useState, useEffect } from 'react'
-import { attendanceAPI, usersAPI, academicsAPI } from '@/lib/api'
+import { attendanceAPI, usersAPI, academicsAPI, promotionAPI } from '@/lib/api'
 import { DashboardStats } from '@/components/dashboard-stats'
 import { FeesChart } from '@/components/fees-chart'
 import { BestPerformingClass } from '@/components/best-performing-class'
 import Link from 'next/link'
 import { School, BookOpen, Users2 } from 'lucide-react'
-import { LayoutDashboard, Users, CheckCircle2, DollarSign } from 'lucide-react'
+import { LayoutDashboard, Users, CheckCircle2, DollarSign, CalendarDays } from 'lucide-react'
 
 // Lazy-load analytics tab so its API calls only fire when user clicks "Analytics"
 const StudentsManagement = dynamic(
@@ -33,6 +33,13 @@ interface QuickStats {
   attendanceRate: number
 }
 
+interface AcademicYearInfo {
+  id: number
+  name: string
+  is_current: boolean
+  status: string
+}
+
 export default function SchoolAdminPage() {
   const [activeTab, setActiveTab ] = useState('dashboard')
   const [stats, setStats] = useState<StatsType>({
@@ -47,17 +54,22 @@ export default function SchoolAdminPage() {
   const [quickStats, setQuickStats] = useState<QuickStats>({
     attendanceRate: 0,
   })
+  const [currentYear, setCurrentYear] = useState<AcademicYearInfo | null>(null)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [studentsRes, teachersRes, attendanceRes, classesRes, subjectsRes] = await Promise.all([
+        const [studentsRes, teachersRes, attendanceRes, classesRes, subjectsRes, yearsRes] = await Promise.all([
           usersAPI.students(),
           usersAPI.teachers(),
           attendanceAPI.overallReport(),
           academicsAPI.classes(),
           academicsAPI.subjects(),
+          promotionAPI.academicYears().catch(() => null),
         ])
+
+        const years = yearsRes?.data?.results || yearsRes?.data || []
+        setCurrentYear(years.find((y: AcademicYearInfo) => y.is_current) || null)
 
         setClassesCount(classesRes.data.results?.length || classesRes.data?.length || 0)
         setSubjectsCount(subjectsRes.data.results?.length || subjectsRes.data?.length || 0)
@@ -91,6 +103,12 @@ export default function SchoolAdminPage() {
             </h1>
             <p className="text-muted-foreground mt-2 text-base md:text-lg">
               Live overview of fees, attendance and academic performance
+              {currentYear && (
+                <span className="inline-flex items-center gap-1.5 ml-3 align-middle px-3 py-1 rounded-full text-sm font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                  <CalendarDays className="w-4 h-4" />
+                  Academic Year: {currentYear.name}
+                </span>
+              )}
             </p>
           </div>
 

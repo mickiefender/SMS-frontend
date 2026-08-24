@@ -213,6 +213,7 @@ const navSections: Record<string, NavSection[]> = {
         { label: "Materials", href: "/dashboard/teacher/materials", icon: UploadCloud },
         { label: "Messages", href: "/dashboard/teacher/messages", icon: MessageCircle },
         { label: "Notifications", href: "/dashboard/teacher/notifications", icon: Bell },
+        
       ],
     },
   ],

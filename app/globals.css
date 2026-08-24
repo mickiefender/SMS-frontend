@@ -471,6 +471,122 @@
 }
 
 /* ============================================================
+   SUPER ADMIN PLATFORM THEME ("console")
+   Amber-accented console look scoped to .sa-theme so it never leaks
+   into school dashboards. Page content is LIGHT; the sidebar keeps a
+   dark graphite surface via its dedicated sidebar tokens below.
+   All shadcn tokens are remapped, so existing components (Card,
+   Table, Button...) restyle automatically.
+   ============================================================ */
+.sa-theme {
+  /* Light content surfaces */
+  --background: #f6f7f9;
+  --foreground: #171b23;
+  --card: #ffffff;
+  --card-foreground: #171b23;
+  --popover: #ffffff;
+  --popover-foreground: #171b23;
+
+  --primary: #f5a623;
+  --primary-light: #ffc35c;
+  --primary-dark: #c77e0d;
+  --primary-foreground: #14100a;
+
+  --secondary: #eef1f5;
+  --secondary-light: #e3e8ef;
+  --secondary-dark: #d7dee8;
+  --secondary-foreground: #171b23;
+
+  --school-primary: #f5a623;
+  --school-secondary: #1c2740;
+  --school-sidebar: #0d1320;
+
+  --muted: #f1f3f6;
+  --muted-foreground: #5c6675;
+  --accent: #fdf3df;
+  --accent-foreground: #171b23;
+  --destructive: #dc2626;
+  --destructive-foreground: #fee2e2;
+  --border: #e4e8ee;
+  --input: #e4e8ee;
+  --ring: #f5a623;
+
+  --chart-1: #f5a623;
+  --chart-2: #059669;
+  --chart-3: #2563eb;
+  --chart-4: #db2777;
+  --chart-5: #64748b;
+
+  /* Sidebar stays dark graphite */
+  --sidebar: #0d1320;
+  --sidebar-foreground: #c9d4e3;
+  --sidebar-primary: #f5a623;
+  --sidebar-primary-foreground: #14100a;
+  --sidebar-accent: #182338;
+  --sidebar-accent-foreground: #e7ecf3;
+  --sidebar-border: #1d2a40;
+  --sidebar-ring: #f5a623;
+  --sidebar-foreground-computed: #c9d4e3;
+
+  /* Light glass surfaces for content cards */
+  --glass-bg: color-mix(in srgb, #ffffff 78%, transparent);
+  --glass-border: color-mix(in srgb, #171b23 10%, transparent);
+  --glass-red-bg: color-mix(in srgb, #f5a623 12%, transparent);
+  --glass-red-border: color-mix(in srgb, #f5a623 35%, transparent);
+  --glass-dark-bg: color-mix(in srgb, #0d1320 85%, transparent);
+  --glass-dark-border: color-mix(in srgb, #ffffff 10%, transparent);
+
+  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.45);
+  --glass-shadow:
+    0 1px 1px rgba(20, 20, 20, 0.03),
+    0 8px 24px -12px rgba(20, 20, 20, 0.18);
+  --glass-shadow-hover:
+    0 2px 4px rgba(20, 20, 20, 0.04),
+    0 16px 40px -12px rgba(20, 20, 20, 0.24),
+    0 0 24px -8px color-mix(in srgb, #f5a623 25%, transparent);
+
+  --blob-1: color-mix(in srgb, #f5a623 12%, transparent);
+  --blob-2: color-mix(in srgb, #059669 8%, transparent);
+  --blob-3: color-mix(in srgb, #2563eb 7%, transparent);
+}
+
+/* Console-style sidebar link */
+.sa-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sidebar-foreground);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sa-nav-link:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sa-nav-link[data-active='true'] {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* Darker skeletons inside the console so they stay visible on the
+   light page background (the default bg-accent/70 is near-invisible). */
+.sa-theme [data-slot='skeleton'] {
+  background-color: color-mix(in srgb, #171b23 16%, transparent);
+}
+.sa-theme [data-slot='skeleton'].shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #171b23 10%, transparent),
+    transparent
+  );
+}
+
+/* ============================================================
    Professional loading system
    ============================================================ */
 

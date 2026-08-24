@@ -9,11 +9,15 @@ import { NotificationProvider } from "@/lib/notifications-context"
 import { MobileToggleProvider } from "@/lib/mobile-toggle-context"
 import { useAuthContext } from "@/lib/auth-context"
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Menu } from "lucide-react"
 
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext()
+  const pathname = usePathname()
+  // Super-admin has its own platform shell (sidebar + topbar); skip this legacy chrome.
+  const isSuperAdminRoute = pathname?.startsWith("/dashboard/super-admin") ?? false
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -62,32 +66,36 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <div className="dashboard-blob dashboard-blob-3" />
           </div>
 
-          {/* Desktop Sidebar - Flex item that can collapse */}
-          <div
-            className={`relative z-10 hidden lg:block transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-20" : "w-72"}`}
-          >
-            <SidebarNav isCollapsed={sidebarCollapsed} />
-          </div>
-
-          {/* Mobile Sidebar - Full screen overlay */}
-          {mobileOpen && (
-            <div className="lg:hidden fixed inset-0 z-50">
-              {/* Backdrop */}
-              <div 
-                className="absolute inset-0 bg-black/50"
-                onClick={() => setMobileOpen(false)}
-              />
-              {/* Sidebar */}
-              <div className="absolute left-0 top-0 h-[100dvh] w-[85%] max-w-[320px] bg-slate-900 shadow-2xl overflow-y-auto overflow-x-hidden">
-                <SidebarNav isMobile={true} onClose={() => setMobileOpen(false)} />
+          {!isSuperAdminRoute && (
+            <>
+              {/* Desktop Sidebar - Flex item that can collapse */}
+              <div
+                className={`relative z-10 hidden lg:block transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-20" : "w-72"}`}
+              >
+                <SidebarNav isCollapsed={sidebarCollapsed} />
               </div>
-            </div>
+
+              {/* Mobile Sidebar - Full screen overlay */}
+              {mobileOpen && (
+                <div className="lg:hidden fixed inset-0 z-50">
+                  {/* Backdrop */}
+                  <div 
+                    className="absolute inset-0 bg-black/50"
+                    onClick={() => setMobileOpen(false)}
+                  />
+                  {/* Sidebar */}
+                  <div className="absolute left-0 top-0 h-[100dvh] w-[85%] max-w-[320px] bg-slate-900 shadow-2xl overflow-y-auto overflow-x-hidden">
+                    <SidebarNav isMobile={true} onClose={() => setMobileOpen(false)} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Main Content - Flexes to fill remaining space */}
           <div className="relative z-10 flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:pb-0 pb-20">
             {/* Top Bar - includes hamburger for mobile */}
-            <TopBar onToggle={toggleUnified} />
+            {!isSuperAdminRoute && <TopBar onToggle={toggleUnified} />}
 
             {/* Main Content - transparent so the mesh background shows through the glass */}
             <main className="flex-1 overflow-auto">
@@ -95,7 +103,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </main>
 
             {/* Mobile Bottom Nav */}
-            <MobileBottomNav />
+            {!isSuperAdminRoute && <MobileBottomNav />}
           </div>
         </div>
       </MobileToggleProvider>
@@ -115,4 +123,3 @@ export default function DashboardLayout({
     </ProtectedRoute>
   )
 }
-
