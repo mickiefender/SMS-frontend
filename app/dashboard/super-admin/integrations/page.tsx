@@ -188,7 +188,7 @@ export default function IntegrationsPage() {
 
   // Webhooks
   function openWebhookDialog(webhook?: AnyObj) {
-    setEdit(webhook)
+    setEdit(webhook ?? null)
     if (webhook) {
       setWebhookForm({
         name: webhook.name ?? "",
@@ -242,12 +242,17 @@ export default function IntegrationsPage() {
     }
   }, [apiKeys.data, webhooks.data])
 
-  const last7Days = useMemo(() => {
+  const last7Days = useMemo<Array<{ day: string; max: number; requests: number; errors: number }>>(() => {
     const raw = usage?.last_7_days ?? {}
     if (!Object.keys(raw).length) return []
     const days = Object.keys(raw).sort()
     const max = Math.max(1, ...days.map((d) => Number(raw[d]?.requests ?? 0)))
-    return days.map((d) => ({ day: d, ...(raw[d] as AnyObj) ?? {}, max }))
+    return days.map((d) => ({
+      day: d,
+      max,
+      requests: Number(raw[d]?.requests ?? 0),
+      errors: Number(raw[d]?.errors ?? 0),
+    }))
   }, [usage])
 
   return (
