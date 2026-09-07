@@ -13,7 +13,7 @@ interface User {
   email: string
   first_name: string
   last_name: string
-  role: "super_admin" | "school_admin" | "teacher" | "student" | "academic_admin" | "exam_officer" | "finance_officer" | "ct_admin_support"
+  role: "super_admin" | "school_admin" | "teacher" | "student" | "parent" | "academic_admin" | "exam_officer" | "finance_officer" | "ct_admin_support"
   school_id?: number
   student_id?: string
   permissions?: string[]

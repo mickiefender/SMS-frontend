@@ -120,14 +120,18 @@ const [formData, setFormData] = useState({
           setError("No school associated with your account")
           return
         }
-        await usersAPI.createStudent({ ...formData, school_id: schoolId })
+        await usersAPI.createStudent({
+          ...formData,
+          username: formData.username.trim().replace(/\s+/g, ""),
+          school_id: schoolId,
+        })
       }
       setIsOpen(false)
       setEditingStudent(null)
       setFormData({ username: "", email: "", first_name: "", last_name: "", password: "", phone: "", address: "" })
       fetchStudents()
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to save student")
+      setError(getErrorMessage(err, "Failed to save student. Please check the highlighted details and try again."))
     }
   }
 

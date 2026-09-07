@@ -3,13 +3,13 @@
 import dynamic from 'next/dynamic'
 import { ProtectedRoute } from '@/lib/protected-route'
 import { useState, useEffect } from 'react'
-import { attendanceAPI, usersAPI, academicsAPI, promotionAPI } from '@/lib/api'
+import { usersAPI, academicsAPI, promotionAPI } from '@/lib/api'
 import { DashboardStats } from '@/components/dashboard-stats'
 import { FeesChart } from '@/components/fees-chart'
 import { BestPerformingClass } from '@/components/best-performing-class'
 import Link from 'next/link'
 import { School, BookOpen, Users2 } from 'lucide-react'
-import { LayoutDashboard, Users, CheckCircle2, DollarSign, CalendarDays } from 'lucide-react'
+import { LayoutDashboard, Users, DollarSign, CalendarDays } from 'lucide-react'
 
 // Lazy-load analytics tab so its API calls only fire when user clicks "Analytics"
 const StudentsManagement = dynamic(
@@ -27,10 +27,6 @@ interface StatsType {
   parents: number
   earnings: number
   loading: boolean
-}
-
-interface QuickStats {
-  attendanceRate: number
 }
 
 interface AcademicYearInfo {
@@ -51,18 +47,15 @@ export default function SchoolAdminPage() {
   })
   const [classesCount, setClassesCount] = useState(0)
   const [subjectsCount, setSubjectsCount] = useState(0)
-  const [quickStats, setQuickStats] = useState<QuickStats>({
-    attendanceRate: 0,
-  })
   const [currentYear, setCurrentYear] = useState<AcademicYearInfo | null>(null)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [studentsRes, teachersRes, attendanceRes, classesRes, subjectsRes, yearsRes] = await Promise.all([
+        const [studentsRes, teachersRes, parentsRes, classesRes, subjectsRes, yearsRes] = await Promise.all([
           usersAPI.students(),
           usersAPI.teachers(),
-          attendanceAPI.overallReport(),
+          usersAPI.parents().catch(() => null),
           academicsAPI.classes(),
           academicsAPI.subjects(),
           promotionAPI.academicYears().catch(() => null),
@@ -74,14 +67,10 @@ export default function SchoolAdminPage() {
         setClassesCount(classesRes.data.results?.length || classesRes.data?.length || 0)
         setSubjectsCount(subjectsRes.data.results?.length || subjectsRes.data?.length || 0)
 
-        setQuickStats({
-          attendanceRate: Number(attendanceRes?.data?.attendance_percentage || 0),
-        })
-
         setStats({
           students: studentsRes?.data?.results?.length || studentsRes?.data?.length || 0,
           teachers: teachersRes?.data?.results?.length || 0,
-          parents: 0,
+          parents: parentsRes?.data?.results?.length || parentsRes?.data?.length || 0,
           earnings: 0,
           loading: false,
         })
@@ -102,7 +91,7 @@ export default function SchoolAdminPage() {
               School Admin Dashboard
             </h1>
             <p className="text-muted-foreground mt-2 text-base md:text-lg">
-              Live overview of fees, attendance and academic performance
+              Live overview of fees and academic performance
               {currentYear && (
                 <span className="inline-flex items-center gap-1.5 ml-3 align-middle px-3 py-1 rounded-full text-sm font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                   <CalendarDays className="w-4 h-4" />
@@ -188,18 +177,6 @@ export default function SchoolAdminPage() {
                 </div>
               </Link>
             </div>
-
-            {!stats.loading && (
-              <div className="stagger grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div className="glass-card p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Attendance Rate</p>
-                    <p className="text-2xl font-bold mt-1 tabular-nums">{quickStats.attendanceRate.toFixed(1)}%</p>
-                  </div>
-                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="glass-card p-6">

@@ -90,7 +90,11 @@ export function StudentsManagement() {
           setError("No school associated with your account. Please ensure you are logged in as a school admin.")
           return
         }
-        const response = await usersAPI.createStudent({ ...formData, school_id: schoolId })
+        const response = await usersAPI.createStudent({
+          ...formData,
+          username: formData.username.trim().replace(/\s+/g, ""),
+          school_id: schoolId,
+        })
         // Display the generated student ID
         if (response.data && response.data.student_id) {
           setGeneratedStudentId(response.data.student_id)

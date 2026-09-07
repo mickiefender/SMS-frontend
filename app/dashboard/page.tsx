@@ -17,6 +17,7 @@ export default function DashboardPage() {
     school_admin: "/dashboard/school-admin",
     teacher: "/dashboard/teacher",
     student: "/dashboard/student",
+    parent: "/dashboard/parent",
   }
 
   const route = roleRoutes[user.role]

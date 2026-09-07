@@ -500,6 +500,16 @@ export const usersAPI = {
   getTeacherById: (id: number) => apiClient.get(`/users/teachers/${id}/`),
   students: (params?: any) => apiClient.get("/users/students/", { params }),
   getStudentById: (id: number) => apiClient.get(`/users/students/${id}/`),
+  parents: (params?: any) => apiClient.get("/users/parents/", { params }),
+  parentDashboard: () => apiClient.get("/users/parents/dashboard/"),
+  parentRelationships: () => apiClient.get("/users/parents/relationships/"),
+  updateParentRelationshipStatus: (parentId: number, relationshipId: number, status: string) =>
+    apiClient.post(`/users/parents/${parentId}/relationships/${relationshipId}/status/`, { status }),
+  linkExistingParent: (data: { parent_id: number; student_ids: number[]; relationship_type: string }) =>
+    apiClient.post("/users/parents/link/", data),
+  removeParentRelationship: (relationshipId: number) =>
+    apiClient.delete(`/users/parents/relationships/${relationshipId}/remove/`),
+  getParentById: (id: number) => apiClient.get(`/users/parents/${id}/`),
   myStudents: () => apiClient.get("/users/students/my_students/"),
   teacherClasses: () => apiClient.get("/users/students/my_classes/"),
   create: (data: any) => apiClient.post("/users/users/", data),
@@ -580,12 +590,17 @@ export const usersAPI = {
       throw error
     }
   },
+  createParent: async (data: any) => {
+    return apiClient.post("/users/parents/", data)
+  },
   update: (id: number, data: any) => apiClient.put(`/users/users/${id}/`, data),
   updateTeacher: (id: number, data: any) => apiClient.put(`/users/teachers/${id}/`, data),
   updateStudent: (id: number, data: any) => apiClient.put(`/users/students/${id}/`, data),
+  updateParent: (id: number, data: any) => apiClient.put(`/users/parents/${id}/`, data),
   delete: (id: number) => apiClient.delete(`/users/users/${id}/`),
   deleteTeacher: (id: number) => apiClient.delete(`/users/teachers/${id}/`),
-  deleteStudent: (id: number) => apiClient.delete(`/users/students/${id}/`),  
+  deleteStudent: (id: number) => apiClient.delete(`/users/students/${id}/`),
+  deleteParent: (id: number) => apiClient.delete(`/users/parents/${id}/`),
   adminStaff: {
     list: () => apiClient.get("/users/admin-staff/"),
     create: (data: any) => apiClient.post("/users/admin-staff/", data),
