@@ -37,6 +37,9 @@ export function Header() {
             <Link href="/contact" className="text-foreground hover:text-primary transition">
               Contact
             </Link>
+            <Link href="/support" className="text-foreground hover:text-primary transition">
+              Support
+            </Link>
           </div>
 
           {/* CTA Button */}
@@ -78,6 +81,9 @@ export function Header() {
             </Link>
             <Link href="/contact" className="block text-foreground hover:text-primary">
               Contact
+            </Link>
+            <Link href="/support" className="block text-foreground hover:text-primary">
+              Support
             </Link>
             <Link
               href="/contact"

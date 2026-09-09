@@ -34,8 +34,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-primary transition">
+                <Link href="/security" className="hover:text-primary transition">
                   Security
+                </Link>
+              </li>
+              <li>
+                <Link href="/support" className="hover:text-primary transition">
+                  Support
                 </Link>
               </li>
             </ul>
